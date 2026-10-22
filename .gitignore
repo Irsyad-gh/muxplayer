@@ -28,6 +28,9 @@ go.work.sum
 # env file
 .env
 
+# muxplayer binary itself
+muxplayer
+
 # Editor/IDE
 # .idea/
 # .vscode/

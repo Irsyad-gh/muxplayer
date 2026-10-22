@@ -1,2 +1,327 @@
 # muxplayer
-Simple TUI local music player for Linux
+
+A fast, dependency-light TUI music player for Linux, built with Go and driven by
+[mpv](https://mpv.io/). Browse your library, queue tracks, and enjoy cover art,
+an accent colour sampled from the artwork, and a live [cava](https://github.com/karlstav/cava)
+visualizer — all inside the terminal.
+
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
+![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+**Current release:** `0.1.0`
+
+## Features
+
+- **Playlist + file explorer** in a two-tab TUI
+- **mpv playback** through mpv's JSON IPC socket — no shell wrappers
+- **Shuffle modes** — off, shuffle bag (no repeats), or shuffle by folder
+- **Repeat modes** — off, all, one, or repeat N×
+- **Cover art** from embedded tags or folder images, rendered in truecolour
+- **Adaptive accent colour** sampled from the current cover
+- **cava visualizer** (64 bars at 30 fps, optional)
+- **Mouse support** — click, double-click, scroll, and drag to seek
+- **Recursive folder import** and a playlist that persists between runs
+- **Automatic skip** of tracks that fail to play
+- **Stdlib-only Go code** — no third-party Go modules
+
+## Requirements
+
+### Runtime
+
+| Dependency | Required | Purpose |
+| --- | --- | --- |
+| [mpv](https://mpv.io/) | **Yes** | Audio playback and metadata (JSON IPC) |
+| [cava](https://github.com/karlstav/cava) | No | Audio visualizer |
+| [ffmpeg](https://ffmpeg.org/) | No | Embedded cover-art extraction |
+
+The player runs fine without `cava` and `ffmpeg`; you just lose the visualizer
+and cover art respectively.
+
+Other requirements:
+
+- **Linux** (uses Linux termios/ioctl syscalls; macOS and Windows are not supported)
+- A **truecolour-capable terminal** for the best results
+- A terminal of at least **60×18** cells
+- **Go 1.21+** only if you build from source
+
+### Supported audio formats
+
+`.mp3` · `.flac` · `.ogg` · `.opus` · `.wav` · `.m4a` · `.aac` · `.wma` · `.ape`
+
+## Installation
+
+### 1. Install the system dependencies
+
+**Arch Linux**
+
+```sh
+sudo pacman -S mpv cava ffmpeg go
+```
+
+**Debian / Ubuntu**
+
+```sh
+sudo apt update
+sudo apt install mpv cava ffmpeg golang-go
+```
+
+**Fedora**
+
+```sh
+sudo dnf install mpv cava ffmpeg golang
+```
+
+> `ffmpeg` may require RPM Fusion on Fedora. Install only `mpv` if you want the
+> smallest setup, then add the optional tools later.
+
+### 2. Build and install muxplayer
+
+```sh
+git clone https://github.com/Irsyad-gh/muxplayer.git
+cd muxplayer
+go build -o muxplayer .
+```
+
+Install it somewhere on your `PATH`:
+
+```sh
+# System-wide
+sudo install -Dm755 muxplayer /usr/local/bin/muxplayer
+
+# ...or per-user (make sure ~/.local/bin is on your PATH)
+install -Dm755 muxplayer ~/.local/bin/muxplayer
+```
+
+Alternatively, let Go install it into its binary directory (make sure
+`$(go env GOPATH)/bin` is on your `PATH`):
+
+```sh
+go install .
+```
+
+### 3. Verify
+
+```sh
+muxplayer --version
+# muxplayer 0.1.0
+```
+
+`--version` prints the version and exits immediately — it does not start mpv or
+open the TUI.
+
+## Usage
+
+```text
+muxplayer [directory]
+muxplayer --version
+```
+
+| Command | Description |
+| --- | --- |
+| `muxplayer` | Start in `~/Music` if it exists, otherwise `$HOME` |
+| `muxplayer ~/Music` | Start the explorer in a specific directory |
+| `muxplayer --version` | Print the version and exit (`-version` also works) |
+
+The saved playlist is loaded on startup; if it is empty, muxplayer opens on the
+**Explorer** tab so you can pick music right away.
+
+## Key bindings
+
+### Navigation
+
+| Key | Action |
+| --- | --- |
+| `Tab` | Switch between **Playlist** and **Explorer** |
+| `↑` / `↓`, `k` / `j` | Move selection |
+| `PgUp` / `PgDn` | Move 10 rows |
+| `Home` / `g` | Jump to the top |
+| `End` / `G` | Jump to the bottom |
+| `Enter` | Play selection; in Explorer, open a folder or add-and-play a file |
+| `Backspace` | Go to the parent directory (Explorer) |
+| `q`, `Ctrl-C` | Save the playlist and quit |
+
+### Playback
+
+| Key | Action |
+| --- | --- |
+| `Space` | Pause/resume; starts the selection when idle |
+| `n` | Next track |
+| `p` | Previous track (restarts the current track if it is past 3 s) |
+| `←` / `→` | Seek −5 s / +5 s |
+| `+` / `=` | Volume +5% |
+| `-` / `_` | Volume −5% |
+
+### Library
+
+| Key | Action |
+| --- | --- |
+| `a` | Add the selected file or folder (recursively) to the playlist — Explorer only |
+| `d` | Remove the selected track from the playlist — Playlist only |
+
+### Modes
+
+| Key | Action |
+| --- | --- |
+| `s` | Cycle shuffle: **off → bag → folder** |
+| `r` | Cycle repeat: **off → all → one → N×** |
+| `[` / `]` | Decrease/increase the N× repeat count (2–99) |
+
+**Shuffle modes**
+
+| Mode | Behaviour |
+| --- | --- |
+| `off` | Play in playlist order |
+| `bag` | Shuffle into a bag and play every track once before reshuffling |
+| `folder` | Shuffle folder order while keeping tracks inside each folder together |
+
+**Repeat modes**
+
+| Mode | Behaviour |
+| --- | --- |
+| `off` | Stop when the queue ends |
+| `all` | Loop the queue |
+| `one` | Repeat the current track |
+| `N×` | Repeat the current track N times, then advance |
+
+### Mouse
+
+| Action | Result |
+| --- | --- |
+| Click a tab | Switch tabs |
+| Click a row | Select it |
+| Double-click a row | Play it |
+| Wheel over the list | Scroll three rows |
+| Wheel over the right panel | Adjust volume |
+| Click/drag the progress bar | Seek |
+| Click the buttons | Repeat, previous, pause/play, next, shuffle |
+
+## Cover art
+
+muxplayer first asks `ffmpeg` to extract artwork embedded in the audio file. If
+that fails, it looks for a folder image next to the track:
+
+```text
+cover.jpg  folder.jpg  cover.png  folder.png  front.jpg
+```
+
+Artwork is scaled and cropped to fit the right-hand panel using truecolour
+half-blocks. The cover's average colour becomes the interface accent; tracks
+without art get a deterministic colour derived from their path.
+
+## Visualizer
+
+When `cava` is installed, muxplayer launches it with a generated config using
+64 bars and ASCII output, then renders the bars under the playlist. Without
+`cava`, the player still works and shows a short notice instead.
+
+If cava picks the wrong audio backend, select one explicitly:
+
+```sh
+MUXPLAYER_CAVA_INPUT=pipewire muxplayer ~/Music
+MUXPLAYER_CAVA_INPUT=pulse muxplayer ~/Music
+MUXPLAYER_CAVA_INPUT=alsa muxplayer ~/Music
+```
+
+Any input method understood by cava can be used.
+
+## Configuration and files
+
+muxplayer has no config file — just a few files generated at runtime:
+
+| Path | Contents |
+| --- | --- |
+| `$XDG_CONFIG_HOME/muxplayer/playlist.txt` | Saved playlist (defaults to `~/.config/muxplayer/playlist.txt`) |
+| `$TMPDIR/muxplayer-<pid>.sock` | Temporary mpv JSON IPC socket |
+| `$TMPDIR/muxplayer-cava-<pid>.conf` | Generated cava config |
+
+Only tracks that still exist are restored from the saved playlist. The playlist
+is written when you quit with `q`/`Ctrl-C` or when the process receives
+`SIGTERM`/`SIGHUP`; killing it with `SIGKILL` will not save changes.
+
+| Environment variable | Description |
+| --- | --- |
+| `MUXPLAYER_CAVA_INPUT` | Force a cava input method (`pulse`, `pipewire`, `alsa`, …) |
+
+## Building and testing
+
+```sh
+# Build
+go build -o muxplayer .
+
+# Tests
+go test ./...
+
+# Race detector
+go test -race ./...
+
+# Static checks
+go vet ./...
+gofmt -l .
+```
+
+Override the reported version at build time:
+
+```sh
+go build -ldflags "-X main.version=0.1.0" -o muxplayer .
+```
+
+## Troubleshooting
+
+**`failed to start mpv (is it installed?)`**
+Install `mpv` and make sure it is on your `PATH`:
+
+```sh
+mpv --version
+```
+
+**`cava not found — visualizer disabled`**
+Install `cava`, or ignore it if you don't need the visualizer.
+
+**No cover art**
+Install `ffmpeg` for embedded artwork, or place one of the folder images listed
+above next to the track. Some files simply contain no artwork.
+
+**Visualizer is flat or reacts to the wrong output**
+Set `MUXPLAYER_CAVA_INPUT` to your audio backend. You can test cava separately
+with `cava` to confirm it sees the audio.
+
+**`terminal too small (min 60x18)`**
+Enlarge the terminal window.
+
+**Colours look wrong**
+Use a terminal with truecolour support and a font that includes block and
+box-drawing glyphs.
+
+**No sound**
+Check that mpv itself can play the file:
+
+```sh
+mpv /path/to/track.flac
+```
+
+**Playlist did not persist**
+Quit with `q`/`Ctrl-C` (or send `SIGTERM`/`SIGHUP`) rather than killing the
+process.
+
+## Known limitations (0.1.0)
+
+- Linux only; no macOS/Windows build
+- No search or filtering in the playlist/explorer
+- No built-in `--help` screen
+- Directories only on the command line — passing a file does not start playback
+- Playlist state is a flat list of absolute paths
+- No gapless-playback or crossfade controls beyond mpv defaults
+
+## Contributing
+
+Issues and pull requests are welcome at
+[github.com/Irsyad-gh/muxplayer](https://github.com/Irsyad-gh/muxplayer).
+Please run `gofmt`, `go vet`, and `go test ./...` before submitting a change.
+
+## License
+
+[MIT](LICENSE) © 2026 Irsyad Dzaky Nurghany
+
+yes, this project is built using AI helper tools
