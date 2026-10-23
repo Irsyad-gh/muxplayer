@@ -117,13 +117,36 @@ func rawMode() func() {
 		ioctl(0, syscall.TCSETS, unsafe.Pointer(&old))
 	}
 }
-func termSize() (int, int) {
+
+// termSize returns the terminal size in cells and the cell aspect ratio
+// (cell height / cell width). Terminals that do not report pixel sizes fall
+// back to 2.0, the usual 1:2 character cell.
+func termSize() (int, int, float64) {
 	var ws [4]uint16
 	ioctl(1, syscall.TIOCGWINSZ, unsafe.Pointer(&ws))
-	if ws[0] == 0 || ws[1] == 0 {
-		return 100, 30
+	w, h := int(ws[1]), int(ws[0])
+	if w == 0 || h == 0 {
+		w, h = 100, 30
 	}
-	return int(ws[1]), int(ws[0])
+	return w, h, cellAspect(ws[2], ws[3], w, h)
+}
+
+// cellAspect derives cell height / cell width from the terminal's pixel size.
+// A value outside the sane range (or no pixel data) yields the 2.0 default.
+func cellAspect(xpixel, ypixel uint16, w, h int) float64 {
+	if xpixel == 0 || ypixel == 0 || w <= 0 || h <= 0 {
+		return 2
+	}
+	cellW := float64(xpixel) / float64(w)
+	cellH := float64(ypixel) / float64(h)
+	if cellW <= 0 {
+		return 2
+	}
+	asp := cellH / cellW
+	if asp < 0.5 || asp > 4 {
+		return 2
+	}
+	return asp
 }
 
 type input struct {
@@ -313,10 +336,47 @@ func hashColor(s string) rgb {
 
 var audioExt = map[string]bool{".mp3": true, ".flac": true, ".ogg": true, ".opus": true, ".wav": true, ".m4a": true, ".aac": true, ".wma": true, ".ape": true}
 
+// coverFill scales the cover down from the largest size that fits the panel,
+// leaving a little breathing room around it.
+const coverFill = 0.85
+
+// coverSize returns the cover's pixel buffer size in device pixels for a panel
+// rw cells wide and h cells tall. The buffer is a pre-distorted square: it is
+// stretched by the inverse of the terminal cell aspect so that, once drawn with
+// half blocks, it appears as a true 1:1 square on screen.
+func coverSize(rw, h int, aspect float64) (pw, ph int) {
+	if aspect < 0.5 || aspect > 4 {
+		aspect = 2
+	}
+	maxRows := h - 11
+	if maxRows < 4 {
+		return 0, 0
+	}
+	fit := math.Min(float64(rw), float64(maxRows)*aspect)
+	pw = int(math.Round(fit * coverFill))
+	pw -= pw % 2
+	if pw < 8 {
+		return 0, 0
+	}
+	rows := int(math.Round(float64(pw) / aspect))
+	if rows < 1 {
+		rows = 1
+	}
+	if rows > maxRows {
+		rows = maxRows
+	}
+	return pw, rows * 2
+}
+
+// coverVF builds the ffmpeg filter that centre-crops the artwork to a square
+// and then stretches it to the target device-pixel size.
+func coverVF(pw, ph int) string {
+	return fmt.Sprintf("crop=min(iw\\,ih):min(iw\\,ih),scale=%d:%d", pw, ph)
+}
+
 func loadCover(path string, w, h int) []byte {
 	try := func(src string) []byte {
-		vf := fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase:flags=area,crop=%d:%d", w, h, w, h)
-		out, err := exec.Command("ffmpeg", "-v", "quiet", "-i", src, "-an", "-frames:v", "1", "-vf", vf, "-f", "rawvideo", "-pix_fmt", "rgb24", "-").Output()
+		out, err := exec.Command("ffmpeg", "-v", "quiet", "-i", src, "-an", "-frames:v", "1", "-vf", coverVF(w, h), "-f", "rawvideo", "-pix_fmt", "rgb24", "-").Output()
 		if err != nil || len(out) != w*h*3 {
 			return nil
 		}
@@ -376,6 +436,8 @@ type model struct {
 	cover          []byte
 	coverKey       string
 	pw, ph         int
+	cellAspect     float64 // cell height / cell width, used to keep the cover square
+	aspectOverride float64 // MUXPLAYER_CELL_ASPECT, 0 when unset
 	coverCh        chan coverRes
 	bars           []float64
 	cavaOK         bool
@@ -747,14 +809,12 @@ func (m *model) draw(w, h int) {
 		}
 	}
 
-	// right panel: cover
-	cw := min(rw, (h-11)*2)
-	cw -= cw % 2
-	chh := cw / 2
+	// right panel: cover (kept square on screen; see coverSize)
+	pw, ph := coverSize(rw, h, m.cellAspect)
+	cw, chh := pw, ph/2
 	ty := 1
 	if cw >= 8 {
 		cx := rx + (rw-cw)/2
-		pw, ph := cw, chh*2
 		if m.cur >= 0 {
 			if key := fmt.Sprintf("%s|%d|%d", m.list[m.cur], pw, ph); key != m.coverKey {
 				m.coverKey, m.cover, m.pw, m.ph = key, nil, pw, ph
@@ -975,11 +1035,6 @@ func plPath() string {
 	return filepath.Join(d, "muxplayer", "playlist.txt")
 }
 
-// version is printed by --version. Override it at build time with:
-//
-//	go build -ldflags "-X main.version=1.2.3"
-
-
 func hasVersionFlag(args []string) bool {
 	for _, a := range args {
 		if a == "--version" || a == "-version" {
@@ -987,6 +1042,20 @@ func hasVersionFlag(args []string) bool {
 		}
 	}
 	return false
+}
+
+// envCellAspect reads MUXPLAYER_CELL_ASPECT (cell height / cell width) so the
+// cover can be squared by hand on terminals that do not report pixel sizes.
+func envCellAspect() float64 {
+	v := os.Getenv("MUXPLAYER_CELL_ASPECT")
+	if v == "" {
+		return 0
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil || f < 0.5 || f > 4 {
+		return 0
+	}
+	return f
 }
 
 func main() {
@@ -1000,7 +1069,7 @@ func main() {
 		os.Exit(1)
 	}
 	m := &model{mp: mp, cur: -1, times: 3, vol: 100, accent: rgb{200, 208, 220}, target: rgb{200, 208, 220},
-		coverCh: make(chan coverRes, 2), lastRow: -1}
+		coverCh: make(chan coverRes, 2), lastRow: -1, aspectOverride: envCellAspect()}
 	if b, err := os.ReadFile(plPath()); err == nil {
 		for _, l := range strings.Split(string(b), "\n") {
 			if _, e := os.Stat(l); l != "" && e == nil {
@@ -1097,7 +1166,11 @@ loop:
 			}
 			prev = nil
 		case <-tick.C:
-			w, h := termSize()
+			w, h, asp := termSize()
+			if m.aspectOverride > 0 {
+				asp = m.aspectOverride
+			}
+			m.cellAspect = asp
 			if w != pw || h != ph {
 				pw, ph, prev = w, h, nil
 				os.Stdout.WriteString("\x1b[2J")

@@ -18,7 +18,7 @@ visualizer — all inside the terminal.
 - **mpv playback** through mpv's JSON IPC socket — no shell wrappers
 - **Shuffle modes** — off, shuffle bag (no repeats), or shuffle by folder
 - **Repeat modes** — off, all, one, or repeat N×
-- **Cover art** from embedded tags or folder images, rendered in truecolour
+- **Cover art** from embedded tags or folder images, drawn as a true 1:1 square
 - **Adaptive accent colour** sampled from the current cover
 - **cava visualizer** (64 bars at 30 fps, optional)
 - **Mouse support** — click, double-click, scroll, and drag to seek
@@ -206,9 +206,12 @@ that fails, it looks for a folder image next to the track:
 cover.jpg  folder.jpg  cover.png  folder.png  front.jpg
 ```
 
-Artwork is scaled and cropped to fit the right-hand panel using truecolour
-half-blocks. The cover's average colour becomes the interface accent; tracks
-without art get a deterministic colour derived from their path.
+Artwork is centre-cropped to a square and drawn with truecolour half-blocks as
+a true **1:1 square**. muxplayer reads your terminal's cell pixel size to do
+this: a cell is usually twice as tall as it is wide, and the artwork is
+pre-scaled by the inverse of that ratio so it never looks stretched. The
+cover's average colour becomes the interface accent; tracks without art get a
+deterministic colour derived from their path.
 
 ## Visualizer
 
@@ -243,6 +246,7 @@ is written when you quit with `q`/`Ctrl-C` or when the process receives
 | Environment variable | Description |
 | --- | --- |
 | `MUXPLAYER_CAVA_INPUT` | Force a cava input method (`pulse`, `pipewire`, `alsa`, …) |
+| `MUXPLAYER_CELL_ASPECT` | Cell height ÷ cell width, overriding terminal detection for the square cover (default `2`; try `1` on square-cell terminals) |
 
 ## Building and testing
 
@@ -282,6 +286,11 @@ Install `cava`, or ignore it if you don't need the visualizer.
 **No cover art**
 Install `ffmpeg` for embedded artwork, or place one of the folder images listed
 above next to the track. Some files simply contain no artwork.
+
+**Cover looks stretched (not square)**
+muxplayer normally detects your terminal's cell pixel size automatically. On
+terminals that do not report it, set the ratio by hand — for example
+`MUXPLAYER_CELL_ASPECT=1` for square cells or the usual `2` for 1:2 cells.
 
 **Visualizer is flat or reacts to the wrong output**
 Set `MUXPLAYER_CAVA_INPUT` to your audio backend. You can test cava separately
