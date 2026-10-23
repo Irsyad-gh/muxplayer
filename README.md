@@ -1,13 +1,14 @@
 # muxplayer
 
-A fast, dependency-light TUI music player for Linux, built with Go and driven by
-[mpv](https://mpv.io/). Browse your library, queue tracks, and enjoy cover art,
-an accent colour sampled from the artwork, and a live [cava](https://github.com/karlstav/cava)
-visualizer — all inside the terminal.
+A fast, dependency-light TUI music player for Linux, macOS, and Windows, built
+with Go and driven by [mpv](https://mpv.io/). Browse your library, queue
+tracks, and enjoy cover art, an accent colour sampled from the artwork, and a
+live [cava](https://github.com/karlstav/cava) visualizer — all inside the
+terminal.
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
-![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 **Current release:** `0.1.0`
@@ -15,7 +16,7 @@ visualizer — all inside the terminal.
 ## Features
 
 - **Playlist + file explorer** in a two-tab TUI
-- **mpv playback** through mpv's JSON IPC socket — no shell wrappers
+- **mpv playback** through mpv's JSON IPC channel — no shell wrappers
 - **Shuffle modes** — off, shuffle bag (no repeats), or shuffle by folder
 - **Repeat modes** — off, all, one, or repeat N×
 - **Cover art** from embedded tags or folder images, drawn as a true 1:1 square
@@ -33,7 +34,7 @@ visualizer — all inside the terminal.
 | Dependency | Required | Purpose |
 | --- | --- | --- |
 | [mpv](https://mpv.io/) | **Yes** | Audio playback and metadata (JSON IPC) |
-| [cava](https://github.com/karlstav/cava) | No | Audio visualizer |
+| [cava](https://github.com/karlstav/cava) | No | Audio visualizer (Linux/macOS) |
 | [ffmpeg](https://ffmpeg.org/) | No | Embedded cover-art extraction |
 
 The player runs fine without `cava` and `ffmpeg`; you just lose the visualizer
@@ -41,7 +42,8 @@ and cover art respectively.
 
 Other requirements:
 
-- **Linux** (uses Linux termios/ioctl syscalls; macOS and Windows are not supported)
+- **Linux, macOS, or Windows** (the terminal and mpv-IPC layers are per-OS;
+  everything else is shared, with build tags)
 - A **truecolour-capable terminal** for the best results
 - A terminal of at least **60×18** cells
 - **Go 1.21+** only if you build from source
@@ -75,6 +77,24 @@ sudo dnf install mpv cava ffmpeg golang
 
 > `ffmpeg` may require RPM Fusion on Fedora. Install only `mpv` if you want the
 > smallest setup, then add the optional tools later.
+
+**macOS**
+
+```sh
+brew install mpv ffmpeg
+# cava is optional — install it if your setup provides it, for the visualizer
+```
+
+**Windows**
+
+```powershell
+scoop install mpv ffmpeg
+# or: winget install mpv ; winget install Gyan.FFmpeg
+```
+
+> On Windows, run muxplayer inside **Windows Terminal** (or any VT-enabled
+> console). `cava` has no native Windows build, so the visualizer shows its
+> "disabled" notice — playback and cover art work normally.
 
 ### 2. Build and install muxplayer
 
@@ -236,12 +256,12 @@ muxplayer has no config file — just a few files generated at runtime:
 | Path | Contents |
 | --- | --- |
 | `$XDG_CONFIG_HOME/muxplayer/playlist.txt` | Saved playlist (defaults to `~/.config/muxplayer/playlist.txt`) |
-| `$TMPDIR/muxplayer-<pid>.sock` | Temporary mpv JSON IPC socket |
+| temp dir `muxplayer-<pid>.sock` (Unix) / `\\.\pipe\muxplayer-<pid>` (Windows) | mpv JSON IPC endpoint |
 | `$TMPDIR/muxplayer-cava-<pid>.conf` | Generated cava config |
 
 Only tracks that still exist are restored from the saved playlist. The playlist
-is written when you quit with `q`/`Ctrl-C` or when the process receives
-`SIGTERM`/`SIGHUP`; killing it with `SIGKILL` will not save changes.
+is written when you quit with `q`/`Ctrl-C`, or when the process receives
+`SIGTERM`/`SIGHUP` (Unix); killing it with `SIGKILL` will not save changes.
 
 | Environment variable | Description |
 | --- | --- |
@@ -263,7 +283,15 @@ go test -race ./...
 # Static checks
 go vet ./...
 gofmt -l .
+
+# Cross-compile
+GOOS=darwin  GOARCH=arm64 go build -o muxplayer-mac .
+GOOS=windows GOARCH=amd64 go build -o muxplayer.exe .
 ```
+
+The Go code is **stdlib-only** on every platform — the OS-specific terminal,
+signal, and mpv-IPC code lives behind build tags (`tty_*`, `termios_*`,
+`signals_*`, `ipc_*`), so no third-party modules are pulled in.
 
 Override the reported version at build time:
 
@@ -316,7 +344,7 @@ process.
 
 ## Known limitations (0.1.0)
 
-- Linux only; no macOS/Windows build
+- The `cava` visualizer has no native Windows build (the player works without it)
 - No search or filtering in the playlist/explorer
 - No built-in `--help` screen
 - Directories only on the command line — passing a file does not start playback
