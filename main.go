@@ -1166,7 +1166,7 @@ func (m *model) drawPlayer(s *screen, box layout, acc int32, ty int) {
 	s.ctr(box.rx, box.rw, ty, m.nowTitle(), def, def, aBold)
 	by := ty + 2
 	m.drawProgress(s, box, acc, by)
-	m.drawButtons(s, box, acc, by)
+	m.drawButtons(s, box, acc, by+3)
 	s.ctr(box.rx, box.rw, by+5, fmt.Sprintf("vol %d%%", int(m.vol)), def, def, aDim)
 }
 
