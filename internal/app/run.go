@@ -13,6 +13,7 @@ import (
 
 	"muxplayer/internal/cava"
 	"muxplayer/internal/diag"
+	"muxplayer/internal/mpris"
 	"muxplayer/internal/mpv"
 	"muxplayer/internal/term"
 )
@@ -24,7 +25,8 @@ func Run(p *mpv.Player, dir string) {
 	if len(m.list) == 0 {
 		m.tab = 1
 	}
-	run(m)
+	mpr := mpris.Start()
+	run(m, mpr)
 }
 
 // view tracks the previous frame for diffed rendering and resize handling.
@@ -61,7 +63,7 @@ func (v *view) flush(rows []string) {
 	_, _ = os.Stdout.Write(buf.Bytes())
 }
 
-func run(m *model) {
+func run(m *model, mpr *mpris.Server) {
 	restore := term.Raw()
 	inCh := make(chan input, 64)
 	go readInput(inCh)
@@ -72,10 +74,13 @@ func run(m *model) {
 	term.WatchSignals(sigCh)
 	tick := time.NewTicker(33 * time.Millisecond)
 
-	defer shutdown(m, viz, restore, sigCh, tick)
+	defer shutdown(m, mpr, viz, restore, sigCh, tick)
 
 	evCh := m.mp.Events()
 	v := &view{}
+	// A nil server (no session bus, Windows) makes these channels block, so
+	// controller wiring is simply inert when unavailable.
+	mprisCh := mpr.Actions()
 	for {
 		select {
 		case in := <-inCh:
@@ -92,22 +97,28 @@ func run(m *model) {
 			m.bars = bars
 		case res := <-m.coverCh:
 			m.handleCover(res)
+		case a := <-mprisCh:
+			if m.action(a) {
+				return
+			}
 		case s := <-sigCh:
 			if !term.IsResize(s) {
 				return
 			}
 			v.invalidate()
 		case <-tick.C:
+			mpr.Update(m.snapshot())
 			v.render(m)
 		}
 	}
 }
 
 // shutdown centralises process cleanup: terminal, playlist, children, signals.
-func shutdown(m *model, viz *cava.Visualizer, restore func(), sigCh chan os.Signal, tick *time.Ticker) {
+func shutdown(m *model, mpr *mpris.Server, viz *cava.Visualizer, restore func(), sigCh chan os.Signal, tick *time.Ticker) {
 	restore()
 	m.savePlaylist()
 	m.mp.Close()
+	mpr.Close()
 	if viz != nil {
 		viz.Close()
 	}

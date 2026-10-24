@@ -25,7 +25,8 @@ terminal.
 - **Mouse support** — click, double-click, scroll, and drag to seek
 - **Recursive folder import** and a playlist that persists between runs
 - **Automatic skip** of tracks that fail to play
-- **Stdlib-only Go code** — no third-party Go modules
+- **MPRIS** — desktop widgets and media keys can see and control playback
+- **Stdlib-only Go code** with one dependency (godbus, for the MPRIS interface)
 
 ## Requirements
 
@@ -35,7 +36,8 @@ terminal.
 | --- | --- | --- |
 | [mpv](https://mpv.io/) | **Yes** | Audio playback and metadata (JSON IPC) |
 | [cava](https://github.com/karlstav/cava) | No | Audio visualizer (Linux/macOS/Windows) |
-| [ffmpeg](https://ffmpeg.org/) | No | Embedded cover-art extraction |
+| [ffmpeg](https://ffmpeg.org/) | No | Embedded cover-art extraction (including shared artwork for MPRIS controllers) |
+| A **D-Bus session bus** (Linux/macOS) | No | MPRIS desktop controller integration |
 
 The player runs fine without `cava` and `ffmpeg`; you just lose the visualizer
 and cover art respectively.
@@ -240,6 +242,23 @@ pre-scaled by the inverse of that ratio so it never looks stretched. The
 cover's average colour becomes the interface accent; tracks without art get a
 deterministic colour derived from their path.
 
+## Desktop integration (MPRIS)
+
+On Linux and macOS, muxplayer registers itself on the D-Bus session bus as
+`org.mpris.MediaPlayer2.muxplayer` (or an instance-suffixed variant when
+another instance owns the name). Desktop media suites — bar widgets, media-key
+daemons, phone-link bridges — then show muxplayer's title, artist, artwork, and
+position, and can **play/pause, stop, skip, seek, set volume, and quit** the
+player.
+
+media suites — bar widgets, media-key daemons, phone-link bridges — which then
+show the current title, artist, and artwork and can play/pause, stop, skip,
+seek, set the volume, and quit the player. Without a session bus (headless
+sessions, Windows), playback is untouched. Exported artwork for controllers is
+extracted to `~/.cache/muxplayer/art`.
+
+## Visualizer
+
 ## Visualizer
 
 When `cava` is installed, muxplayer launches it with a generated config using
@@ -268,6 +287,7 @@ muxplayer has no config file — just a few files generated at runtime:
 | Path | Contents |
 | --- | --- |
 | `$XDG_CONFIG_HOME/muxplayer/playlist.txt` | Saved playlist (defaults to `~/.config/muxplayer/playlist.txt`) |
+| `$XDG_CACHE_HOME/muxplayer/art/` | Artwork extracted for MPRIS controllers |
 | temp dir `muxplayer-<pid>.sock` (Unix) / `\\.\pipe\muxplayer-<pid>` (Windows) | mpv JSON IPC endpoint |
 | temp dir `muxplayer-cava-<pid>.conf` | Generated cava config |
 
@@ -293,7 +313,7 @@ go test ./...
 go test -race ./...
 
 # Static checks
-go vet ./...
+go vet -stdmethods=false ./...
 gofmt -l .
 
 # Cross-compile
@@ -301,9 +321,10 @@ GOOS=darwin  GOARCH=arm64 go build -o muxplayer-mac .
 GOOS=windows GOARCH=amd64 go build -o muxplayer.exe .
 ```
 
-The Go code is **stdlib-only** on every platform. Platform-specific files sit
+The Go code uses **one third-party module** — [godbus/dbus](https://github.com/godbus/dbus),
+for the MPRIS D-Bus interface — on every platform. Platform-specific files sit
 next to the package they serve (see [Project layout](#project-layout)) and are
-selected with build tags, so no third-party modules are pulled in.
+selected with build tags.
 
 Override the reported version at build time:
 
@@ -321,6 +342,7 @@ internal/
 ├── cover/              artwork loading (ffmpeg) and colour helpers
 ├── diag/               stderr logging
 ├── mpv/                mpv process and JSON IPC client
+├── mpris/              MPRIS D-Bus interface for desktop media controllers
 └── term/               raw mode, terminal size, signals
 ```
 
@@ -386,7 +408,13 @@ process.
 
 Issues and pull requests are welcome at
 [github.com/Irsyad-gh/muxplayer](https://github.com/Irsyad-gh/muxplayer).
-Please run `gofmt`, `go vet`, and `go test ./...` before submitting a change.
+Please run `gofmt`, `go vet -stdmethods=false`, and `go test ./...` before
+submitting a change.
+
+> Why `-stdmethods=false`? The MPRIS interface must export a method literally
+> named `Seek` taking microseconds (`Seek(int64)`). That conflicts with Go's
+> `io.Seeker` naming convention, which vet's `stdmethods` check flags as a
+> false positive. Every other vet check stays enabled.
 
 ## License
 
