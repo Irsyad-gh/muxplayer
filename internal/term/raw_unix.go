@@ -1,6 +1,6 @@
 //go:build linux || darwin
 
-package main
+package term
 
 import (
 	"fmt"
@@ -12,9 +12,9 @@ func ioctl(fd, req uintptr, p unsafe.Pointer) {
 	syscall.Syscall(syscall.SYS_IOCTL, fd, req, uintptr(p))
 }
 
-// rawMode switches the tty to raw input and the alternate screen. The returned
+// Raw switches the tty to raw input and the alternate screen. The returned
 // function restores the previous terminal state.
-func rawMode() func() {
+func Raw() func() {
 	var t syscall.Termios
 	ioctl(0, getTermios, unsafe.Pointer(&t))
 	old := t
@@ -29,9 +29,9 @@ func rawMode() func() {
 	}
 }
 
-// termSize returns the terminal size in cells and the cell aspect ratio
+// Size returns the terminal size in cells and the cell aspect ratio
 // (height / width). Terminals that report no pixel size fall back to 2.0.
-func termSize() (int, int, float64) {
+func Size() (int, int, float64) {
 	var ws [4]uint16
 	ioctl(1, syscall.TIOCGWINSZ, unsafe.Pointer(&ws))
 	w, h := int(ws[1]), int(ws[0])

@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package term
 
 import (
 	"fmt"
@@ -54,9 +54,9 @@ func setConsoleMode(handle uintptr, mode uint32) {
 	_, _, _ = procSetConsoleMode.Call(handle, uintptr(mode))
 }
 
-// rawMode enables VT sequences and disables line/echo input. The returned
+// Raw enables VT sequences and disables line/echo input. The returned
 // function restores the previous console modes.
-func rawMode() func() {
+func Raw() func() {
 	in, out := uintptr(syscall.Stdin), uintptr(syscall.Stdout)
 	oldIn := consoleMode(in)
 	oldOut := consoleMode(out)
@@ -74,9 +74,9 @@ func rawMode() func() {
 	}
 }
 
-// termSize reads the console window size. Windows exposes no cell pixel size,
+// Size reads the console window size. Windows exposes no cell pixel size,
 // so the aspect ratio uses the portable default.
-func termSize() (int, int, float64) {
+func Size() (int, int, float64) {
 	var info consoleInfo
 	ret, _, _ := procGetConsoleScreenBufferInfo.Call(
 		uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&info)))

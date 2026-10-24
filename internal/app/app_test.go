@@ -1,9 +1,13 @@
-package main
+package app
 
-import "testing"
+import (
+	"testing"
+
+	"muxplayer/internal/cover"
+)
 
 func newTestModel() *model {
-	m := &model{cur: -1, times: 3, vol: 80, accent: rgb{200, 208, 220}, target: rgb{200, 208, 220},
+	m := &model{cur: -1, times: 3, vol: 80, accent: cover.RGB{200, 208, 220}, target: cover.RGB{200, 208, 220},
 		coverCh: make(chan coverRes, 4), cavaOK: true, bars: []float64{.1, .5, .9, 1, .3, .7}}
 	for _, p := range []string{"/a/1.mp3", "/a/2.mp3", "/b/3.mp3", "/b/4.mp3", "/c/5.mp3"} {
 		m.list = append(m.list, p)

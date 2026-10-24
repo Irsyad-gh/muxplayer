@@ -1,6 +1,6 @@
 //go:build linux || darwin
 
-package main
+package mpv
 
 import (
 	"fmt"
@@ -11,13 +11,13 @@ import (
 	"time"
 )
 
-// mpvAddr is the Unix socket mpv listens on for JSON IPC.
-func mpvAddr() string {
+// addr returns the Unix socket mpv listens on for JSON IPC.
+func addr() string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("muxplayer-%d.sock", os.Getpid()))
 }
 
-// dialMPV retries until mpv has created its socket or the budget expires.
-func dialMPV(addr string) (io.ReadWriteCloser, error) {
+// dial retries until mpv has created its socket or the budget expires.
+func dial(addr string) (io.ReadWriteCloser, error) {
 	var err error
 	for i := 0; i < 50; i++ {
 		var conn net.Conn
@@ -29,4 +29,4 @@ func dialMPV(addr string) (io.ReadWriteCloser, error) {
 	return nil, err
 }
 
-func cleanupMPV(addr string) { _ = os.Remove(addr) }
+func cleanup(addr string) { _ = os.Remove(addr) }

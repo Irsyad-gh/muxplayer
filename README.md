@@ -6,12 +6,12 @@ tracks, and enjoy cover art, an accent colour sampled from the artwork, and a
 live [cava](https://github.com/karlstav/cava) visualizer — all inside the
 terminal.
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Current release:** `0.1.0`
+**Current release:** `0.2.0`
 
 ## Features
 
@@ -34,7 +34,7 @@ terminal.
 | Dependency | Required | Purpose |
 | --- | --- | --- |
 | [mpv](https://mpv.io/) | **Yes** | Audio playback and metadata (JSON IPC) |
-| [cava](https://github.com/karlstav/cava) | No | Audio visualizer (Linux/macOS) |
+| [cava](https://github.com/karlstav/cava) | No | Audio visualizer (Linux/macOS/Windows) |
 | [ffmpeg](https://ffmpeg.org/) | No | Embedded cover-art extraction |
 
 The player runs fine without `cava` and `ffmpeg`; you just lose the visualizer
@@ -90,11 +90,18 @@ brew install mpv ffmpeg
 ```powershell
 scoop install mpv ffmpeg
 # or: winget install mpv ; winget install Gyan.FFmpeg
+
+# optional visualizer
+winget install karlstav.cava
+# or install cava_win_x64_install.msi from the cava releases page
 ```
 
 > On Windows, run muxplayer inside **Windows Terminal** (or any VT-enabled
-> console). `cava` has no native Windows build, so the visualizer shows its
-> "disabled" notice — playback and cover art work normally.
+> console). cava builds natively for Windows; its `winscap` backend captures
+> the default output device, so the visualizer follows whatever mpv is playing.
+> If you installed cava after opening the terminal, restart it so the updated
+> `PATH` is picked up — muxplayer also looks in `%LOCALAPPDATA%\cava\cava.exe`
+> directly.
 
 ### 2. Build and install muxplayer
 
@@ -239,7 +246,9 @@ When `cava` is installed, muxplayer launches it with a generated config using
 64 bars and ASCII output, then renders the bars under the playlist. Without
 `cava`, the player still works and shows a short notice instead.
 
-If cava picks the wrong audio backend, select one explicitly:
+cava runs on Linux, macOS, and Windows. On Windows it captures the default
+output device through WASAPI loopback, so no extra setup is required. On
+Linux/macOS, if cava picks the wrong audio backend, select one explicitly:
 
 ```sh
 MUXPLAYER_CAVA_INPUT=pipewire muxplayer ~/Music
@@ -247,7 +256,10 @@ MUXPLAYER_CAVA_INPUT=pulse muxplayer ~/Music
 MUXPLAYER_CAVA_INPUT=alsa muxplayer ~/Music
 ```
 
-Any input method understood by cava can be used.
+Any input method understood by cava can be used. `MUXPLAYER_CAVA_INPUT` is
+ignored on Windows, where cava's Windows build only supports its built-in
+loopback capture. If you install cava with the MSI or winget, use version
+1.0.0 or newer.
 
 ## Configuration and files
 
@@ -257,7 +269,7 @@ muxplayer has no config file — just a few files generated at runtime:
 | --- | --- |
 | `$XDG_CONFIG_HOME/muxplayer/playlist.txt` | Saved playlist (defaults to `~/.config/muxplayer/playlist.txt`) |
 | temp dir `muxplayer-<pid>.sock` (Unix) / `\\.\pipe\muxplayer-<pid>` (Windows) | mpv JSON IPC endpoint |
-| `$TMPDIR/muxplayer-cava-<pid>.conf` | Generated cava config |
+| temp dir `muxplayer-cava-<pid>.conf` | Generated cava config |
 
 Only tracks that still exist are restored from the saved playlist. The playlist
 is written when you quit with `q`/`Ctrl-C`, or when the process receives
@@ -265,7 +277,7 @@ is written when you quit with `q`/`Ctrl-C`, or when the process receives
 
 | Environment variable | Description |
 | --- | --- |
-| `MUXPLAYER_CAVA_INPUT` | Force a cava input method (`pulse`, `pipewire`, `alsa`, …) |
+| `MUXPLAYER_CAVA_INPUT` | Force a cava input method (`pulse`, `pipewire`, `alsa`, …); ignored on Windows |
 | `MUXPLAYER_CELL_ASPECT` | Cell height ÷ cell width, overriding terminal detection for the square cover (default `2`; try `1` on square-cell terminals) |
 
 ## Building and testing
@@ -289,15 +301,32 @@ GOOS=darwin  GOARCH=arm64 go build -o muxplayer-mac .
 GOOS=windows GOARCH=amd64 go build -o muxplayer.exe .
 ```
 
-The Go code is **stdlib-only** on every platform — the OS-specific terminal,
-signal, and mpv-IPC code lives behind build tags (`tty_*`, `termios_*`,
-`signals_*`, `ipc_*`), so no third-party modules are pulled in.
+The Go code is **stdlib-only** on every platform. Platform-specific files sit
+next to the package they serve (see [Project layout](#project-layout)) and are
+selected with build tags, so no third-party modules are pulled in.
 
 Override the reported version at build time:
 
 ```sh
 go build -ldflags "-X main.version=0.1.0" -o muxplayer .
 ```
+
+## Project layout
+
+```text
+main.go                 command entry point: flags, startup, mpv launch
+internal/
+├── app/                TUI state, playlist, drawing, keyboard/mouse, cover view
+├── cava/               cava process, config and raw bar stream
+├── cover/              artwork loading (ffmpeg) and colour helpers
+├── diag/               stderr logging
+├── mpv/                mpv process and JSON IPC client
+└── term/               raw mode, terminal size, signals
+```
+
+Platform code lives beside what it serves: `term/raw_unix.go` and
+`term/raw_windows.go`, `term/signals_*`, `term/termios_*`, `mpv/ipc_*`, and
+`cava/input_*`.
 
 ## Troubleshooting
 
@@ -309,7 +338,8 @@ mpv --version
 ```
 
 **`cava not found — visualizer disabled`**
-Install `cava`, or ignore it if you don't need the visualizer.
+Install `cava`, or ignore it if you don't need the visualizer. On Windows:
+`winget install karlstav.cava`, then reopen the terminal.
 
 **No cover art**
 Install `ffmpeg` for embedded artwork, or place one of the folder images listed
@@ -321,8 +351,10 @@ terminals that do not report it, set the ratio by hand — for example
 `MUXPLAYER_CELL_ASPECT=1` for square cells or the usual `2` for 1:2 cells.
 
 **Visualizer is flat or reacts to the wrong output**
-Set `MUXPLAYER_CAVA_INPUT` to your audio backend. You can test cava separately
-with `cava` to confirm it sees the audio.
+On Linux/macOS, set `MUXPLAYER_CAVA_INPUT` to your audio backend. You can test
+cava separately with `cava` to confirm it sees the audio. On Windows, cava
+always visualizes the default output device — check that mpv and cava use the
+same one.
 
 **`terminal too small (min 60x18)`**
 Enlarge the terminal window.
@@ -344,7 +376,6 @@ process.
 
 ## Known limitations (0.1.0)
 
-- The `cava` visualizer has no native Windows build (the player works without it)
 - No search or filtering in the playlist/explorer
 - No built-in `--help` screen
 - Directories only on the command line — passing a file does not start playback
