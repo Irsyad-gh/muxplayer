@@ -6,7 +6,7 @@ tracks, and enjoy cover art, an accent colour sampled from the artwork, and a
 live [cava](https://github.com/karlstav/cava) visualizer — all inside the
 terminal.
 
-![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![Version](https://img.shields.io/badge/version-0.5.0-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
