@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"muxplayer/internal/diag"
+	"muxplayer/internal/proc"
 )
 
 const barCount = 64
@@ -41,6 +42,7 @@ func Start(ch chan<- []float64) *Visualizer {
 		diag.Debugf("cannot start cava: %v", err)
 		return nil
 	}
+	proc.KillOnExit(cmd)
 	diag.Debugf("cava: started %s", bin)
 	go func() {
 		scan(out, ch)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"muxplayer/internal/diag"
+	"muxplayer/internal/proc"
 )
 
 // Player is a running mpv instance plus its event stream.
@@ -28,6 +29,7 @@ func Start() (*Player, error) {
 		diag.Debugf("mpv: start failed: %v", err)
 		return nil, err
 	}
+	proc.KillOnExit(cmd) // mpv must not outlive muxplayer
 	conn, err := dial(addr)
 	if err != nil {
 		diag.Debugf("mpv: IPC connect failed: %v", err)
