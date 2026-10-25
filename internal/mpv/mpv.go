@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"io"
 	"os/exec"
+	"time"
+
+	"muxplayer/internal/diag"
 )
 
 // Player is a running mpv instance plus its event stream.
@@ -19,15 +22,19 @@ type Player struct {
 // Start launches mpv in idle mode with a private IPC endpoint and connects.
 func Start() (*Player, error) {
 	addr := addr()
+	diag.Debugf("mpv: starting with IPC endpoint %s", addr)
 	cmd := exec.Command("mpv", commandLine(addr)...)
 	if err := cmd.Start(); err != nil {
+		diag.Debugf("mpv: start failed: %v", err)
 		return nil, err
 	}
 	conn, err := dial(addr)
 	if err != nil {
+		diag.Debugf("mpv: IPC connect failed: %v", err)
 		_ = cmd.Process.Kill()
 		return nil, err
 	}
+	diag.Debugf("mpv: connected")
 	p := &Player{conn: conn, cmd: cmd, sock: addr, ev: make(chan map[string]any, 128)}
 	go p.readEvents()
 	p.observe()
@@ -42,6 +49,7 @@ func (p *Player) Do(cmd ...any) {
 	if p == nil {
 		return
 	}
+	diag.Debugf("mpv command: %v", cmd)
 	msg, _ := json.Marshal(map[string]any{"command": cmd})
 	_, _ = p.conn.Write(append(msg, '\n'))
 }
@@ -51,6 +59,7 @@ func (p *Player) Close() {
 	if p == nil {
 		return
 	}
+	diag.Debugf("mpv: closing")
 	if p.cmd != nil && p.cmd.Process != nil {
 		_ = p.cmd.Process.Kill()
 	}
@@ -67,10 +76,24 @@ func commandLine(addr string) []string {
 func (p *Player) readEvents() {
 	sc := bufio.NewScanner(p.conn)
 	sc.Buffer(make([]byte, 1<<20), 1<<20)
+	lastPos := time.Time{}
 	for sc.Scan() {
 		var e map[string]any
 		ok := json.Unmarshal(sc.Bytes(), &e) == nil && e["event"] != nil
 		if ok {
+			log := true
+			// time-pos changes many times per second; keep the log readable
+			// while still showing a position sample every second.
+			if e["event"] == "property-change" && e["name"] == "time-pos" {
+				if time.Since(lastPos) < time.Second {
+					log = false
+				} else {
+					lastPos = time.Now()
+				}
+			}
+			if log {
+				diag.Debugf("mpv event: %v", e)
+			}
 			p.ev <- e
 		}
 	}

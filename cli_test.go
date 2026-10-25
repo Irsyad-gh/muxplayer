@@ -28,6 +28,33 @@ func TestHasVersionFlag(t *testing.T) {
 	}
 }
 
+func TestParseArgs(t *testing.T) {
+	cases := []struct {
+		args  []string
+		debug bool
+		child bool
+		dir   string
+		rest  []string
+	}{
+		{[]string{}, false, false, "", nil},
+		{[]string{"--debug"}, true, false, "", nil},
+		{[]string{"-debug", "/music"}, true, false, "/music", []string{"/music"}},
+		{[]string{"/music", "--debug"}, true, false, "/music", []string{"/music"}},
+		{[]string{"--debug-child", "/music"}, false, true, "/music", []string{"/music"}},
+		{[]string{"--verbose", "/music"}, false, false, "/music", []string{"--verbose", "/music"}},
+	}
+	for _, c := range cases {
+		got := parseArgs(c.args)
+		if got.debug != c.debug || got.debugChild != c.child || got.dir != c.dir {
+			t.Errorf("parseArgs(%q) = debug %v child %v dir %q, want %v %v %q",
+				c.args, got.debug, got.debugChild, got.dir, c.debug, c.child, c.dir)
+		}
+		if strings.Join(got.args, "\x00") != strings.Join(c.rest, "\x00") {
+			t.Errorf("parseArgs(%q) args = %q, want %q", c.args, got.args, c.rest)
+		}
+	}
+}
+
 // TestVersionFlagExitsWithoutStartingApp re-executes this test binary and runs
 // main with --version. It must print the version and return without touching
 // mpv or the terminal.

@@ -1,6 +1,10 @@
 package app
 
-import "path/filepath"
+import (
+	"path/filepath"
+
+	"muxplayer/internal/diag"
+)
 
 func (m *model) prev() {
 	if m.tpos > 3 {
@@ -26,11 +30,13 @@ func (m *model) stop() {
 
 func (m *model) cycleShuffle() {
 	m.shuffle = (m.shuffle + 1) % 3
+	diag.Debugf("mode: shuffle %d", m.shuffle)
 	m.rebuild()
 }
 
 func (m *model) cycleRepeat() {
 	m.repeat, m.played = (m.repeat+1)%4, 1
+	diag.Debugf("mode: repeat %d", m.repeat)
 }
 
 // onKey returns true when the app should quit.

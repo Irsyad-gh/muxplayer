@@ -26,6 +26,8 @@ terminal.
 - **Recursive folder import** and a playlist that persists between runs
 - **Automatic skip** of tracks that fail to play
 - **MPRIS** — desktop widgets and media keys can see and control playback
+- **Debug mode** — `--debug` mirrors live diagnostics in the original window
+  while the UI runs in a separate terminal window
 - **Stdlib-only Go code** with one dependency (godbus, for the MPRIS interface)
 
 ## Requirements
@@ -144,6 +146,7 @@ open the TUI.
 
 ```text
 muxplayer [directory]
+muxplayer --debug [directory]
 muxplayer --version
 ```
 
@@ -151,10 +154,37 @@ muxplayer --version
 | --- | --- |
 | `muxplayer` | Start in `~/Music` if it exists, otherwise `$HOME` |
 | `muxplayer ~/Music` | Start the explorer in a specific directory |
+| `muxplayer --debug` | Open the UI in a new terminal window and stream its diagnostics in the original one |
 | `muxplayer --version` | Print the version and exit (`-version` also works) |
 
 The saved playlist is loaded on startup; if it is empty, muxplayer opens on the
 **Explorer** tab so you can pick music right away.
+
+### Debug mode
+
+```sh
+muxplayer --debug ~/Music
+```
+
+Debug mode launches the player UI in a **new terminal window** and keeps the
+current window as a live console. Every diagnostic line written by the player
+window — terminal size changes, key and mouse input, mpv commands and events,
+cover-art extraction, cava, MPRIS, and shutdown — is mirrored there as it
+happens. Close the player window or press `Ctrl-C` in the console to stop both.
+
+muxplayer picks an installed terminal emulator automatically (`$TERMINAL`,
+`x-terminal-emulator`, GNOME Terminal, Konsole, kitty, alacritty, foot, WezTerm,
+xterm, and others). Inside tmux without a graphical display it opens a new tmux
+window instead. To force a particular terminal, set `MUXPLAYER_TERMINAL` to its
+executable name or path:
+
+```sh
+MUXPLAYER_TERMINAL=kitty muxplayer --debug
+```
+
+The hidden `--debug-child` flag is used internally by the launcher; run it only
+if you want to start a player whose diagnostics go to the current terminal's
+stderr.
 
 ## Key bindings
 
@@ -299,6 +329,8 @@ is written when you quit with `q`/`Ctrl-C`, or when the process receives
 | --- | --- |
 | `MUXPLAYER_CAVA_INPUT` | Force a cava input method (`pulse`, `pipewire`, `alsa`, …); ignored on Windows |
 | `MUXPLAYER_CELL_ASPECT` | Cell height ÷ cell width, overriding terminal detection for the square cover (default `2`; try `1` on square-cell terminals) |
+| `MUXPLAYER_TERMINAL` | Terminal emulator used by `--debug` on Linux/macOS (executable name or path) |
+| `MUXPLAYER_DEBUG` | Print debug diagnostics to stderr without opening a second window |
 
 ## Building and testing
 
@@ -340,6 +372,7 @@ internal/
 ├── app/                TUI state, playlist, drawing, keyboard/mouse, cover view
 ├── cava/               cava process, config and raw bar stream
 ├── cover/              artwork loading (ffmpeg) and colour helpers
+├── debugmode/          --debug terminal launcher and log mirroring
 ├── diag/               stderr logging
 ├── mpv/                mpv process and JSON IPC client
 ├── mpris/              MPRIS D-Bus interface for desktop media controllers
@@ -380,6 +413,11 @@ same one.
 
 **`terminal too small (min 60x18)`**
 Enlarge the terminal window.
+
+**`--debug` does not open a window**
+muxplayer could not find a terminal emulator. Set one explicitly, for example
+`MUXPLAYER_TERMINAL=kitty muxplayer --debug`, or run inside tmux (which opens a
+new tmux window instead).
 
 **Colours look wrong**
 Use a terminal with truecolour support and a font that includes block and

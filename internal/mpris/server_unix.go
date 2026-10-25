@@ -15,6 +15,8 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/godbus/dbus/v5/prop"
+
+	"muxplayer/internal/diag"
 )
 
 // Path is the object path shared by both interfaces; each track advertises
@@ -41,28 +43,34 @@ type Server struct {
 func Start() *Server {
 	conn, err := dbus.SessionBus()
 	if err != nil {
+		diag.Debugf("mpris: no session bus: %v", err)
 		return nil
 	}
 	s := &Server{actions: make(chan Action, 16)}
 	root := &rootIface{s: s}
 	player := &playerIface{s: s}
 	if err = conn.Export(root, Path, rootName); err != nil {
+		diag.Debugf("mpris: cannot export root interface: %v", err)
 		conn.Close()
 		return nil
 	}
 	if err = conn.Export(player, Path, playerName); err != nil {
+		diag.Debugf("mpris: cannot export player interface: %v", err)
 		conn.Close()
 		return nil
 	}
 	if s.props, err = prop.Export(conn, Path, propsSpec(s)); err != nil {
+		diag.Debugf("mpris: cannot export properties: %v", err)
 		conn.Close()
 		return nil
 	}
 	exportIntrospection(conn, root, player, s.props)
 	if !s.claimName(conn) {
+		diag.Debugf("mpris: cannot claim a bus name")
 		conn.Close()
 		return nil
 	}
+	diag.Debugf("mpris: registered as %s", Service)
 	return s
 }
 

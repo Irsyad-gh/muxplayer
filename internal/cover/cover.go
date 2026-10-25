@@ -101,6 +101,7 @@ func vf(pw, ph int) string {
 
 func Load(path string, w, h int) []byte {
 	if pix := ffmpegCover(path, w, h); pix != nil {
+		diag.Debugf("cover: extracted embedded artwork from %s (%dx%d)", filepath.Base(path), w, h)
 		return pix
 	}
 	for _, name := range coverNames {
@@ -109,6 +110,7 @@ func Load(path string, w, h int) []byte {
 			continue
 		}
 		if pix := ffmpegCover(p, w, h); pix != nil {
+			diag.Debugf("cover: using folder artwork %s", p)
 			return pix
 		}
 	}

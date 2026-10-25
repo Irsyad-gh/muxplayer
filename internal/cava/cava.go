@@ -41,6 +41,7 @@ func Start(ch chan<- []float64) *Visualizer {
 		diag.Debugf("cannot start cava: %v", err)
 		return nil
 	}
+	diag.Debugf("cava: started %s", bin)
 	go func() {
 		scan(out, ch)
 		_ = cmd.Wait() // reap cava after it exits or is killed

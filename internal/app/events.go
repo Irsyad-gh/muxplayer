@@ -1,6 +1,9 @@
 package app
 
-import "muxplayer/internal/cover"
+import (
+	"muxplayer/internal/cover"
+	"muxplayer/internal/diag"
+)
 
 func (m *model) handleInput(in input) bool {
 	if in.mouse {
@@ -56,5 +59,8 @@ func (m *model) handleCover(res coverRes) {
 	m.cover = res.pix
 	if res.pix != nil {
 		m.target = cover.Lift(cover.AvgColor(res.pix))
+		diag.Debugf("cover: loaded %s", res.key)
+	} else {
+		diag.Debugf("cover: none for %s", res.key)
 	}
 }

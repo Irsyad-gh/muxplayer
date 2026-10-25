@@ -25,7 +25,9 @@ func Run(p *mpv.Player, dir string) {
 	if len(m.list) == 0 {
 		m.tab = 1
 	}
+	diag.Debugf("app: starting in %s (%d tracks in playlist)", dir, len(m.list))
 	mpr := mpris.Start()
+	diag.Debugf("app: MPRIS available: %v", mpr != nil)
 	run(m, mpr)
 }
 
@@ -44,6 +46,7 @@ func (v *view) render(m *model) {
 	}
 	m.cellAspect = aspect
 	if w != v.w || h != v.h {
+		diag.Debugf("terminal: %dx%d cells, cell aspect %.2f", w, h, aspect)
 		v.w, v.h, v.prev = w, h, nil
 		_, _ = os.Stdout.WriteString("\x1b[2J")
 	}
@@ -84,6 +87,11 @@ func run(m *model, mpr *mpris.Server) {
 	for {
 		select {
 		case in := <-inCh:
+			// Drag motion arrives at a high rate; log the click, release and
+			// wheel events instead of every intermediate coordinate.
+			if !in.mouse || in.btn != 32 {
+				diag.Debugf("input: %+v", in)
+			}
 			if m.handleInput(in) {
 				return
 			}
@@ -98,6 +106,7 @@ func run(m *model, mpr *mpris.Server) {
 		case res := <-m.coverCh:
 			m.handleCover(res)
 		case a := <-mprisCh:
+			diag.Debugf("mpris action: %s %v", a.Kind, a.Arg)
 			if m.action(a) {
 				return
 			}
@@ -115,6 +124,7 @@ func run(m *model, mpr *mpris.Server) {
 
 // shutdown centralises process cleanup: terminal, playlist, children, signals.
 func shutdown(m *model, mpr *mpris.Server, viz *cava.Visualizer, restore func(), sigCh chan os.Signal, tick *time.Ticker) {
+	diag.Debugf("app: shutting down")
 	restore()
 	m.savePlaylist()
 	m.mp.Close()

@@ -6,6 +6,7 @@ package diag
 import (
 	"fmt"
 	"os"
+	"sync"
 )
 
 const (
@@ -14,12 +15,18 @@ const (
 	levelError = "ERROR"
 )
 
-var debugOn = os.Getenv("MUXPLAYER_DEBUG") != ""
+var (
+	debugOn = os.Getenv("MUXPLAYER_DEBUG") != ""
+	logMu   sync.Mutex
+)
 
 func logf(level, format string, a ...any) {
-	if level != levelDebug || debugOn {
-		fmt.Fprintf(os.Stderr, "%-5s muxplayer: %s\n", level, fmt.Sprintf(format, a...))
+	if level == levelDebug && !debugOn {
+		return
 	}
+	logMu.Lock()
+	defer logMu.Unlock()
+	fmt.Fprintf(os.Stderr, "%-5s muxplayer: %s\n", level, fmt.Sprintf(format, a...))
 }
 
 // Debugf logs a diagnostic line only when MUXPLAYER_DEBUG is set.

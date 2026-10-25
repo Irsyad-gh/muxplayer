@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"muxplayer/internal/cover"
+	"muxplayer/internal/diag"
 )
 
 // rebuild rearranges the play order for the current shuffle mode.
@@ -98,6 +99,7 @@ func (m *model) playAt(idx int) {
 	if idx < 0 || idx >= len(m.list) {
 		return
 	}
+	diag.Debugf("player: track %d/%d %s", idx+1, len(m.list), m.list[idx])
 	m.cur, m.played, m.tpos, m.meta = idx, 1, 0, nil
 	m.findPos(idx)
 	m.mp.Do("loadfile", m.list[idx], "replace")
@@ -183,6 +185,7 @@ func (m *model) addDir(dir string) int {
 		return nil
 	}
 	_ = filepath.WalkDir(dir, walk)
+	diag.Debugf("playlist: added %d track(s) from %s", n, dir)
 	return n
 }
 
@@ -190,6 +193,7 @@ func (m *model) remove(i int) {
 	if i < 0 || i >= len(m.list) {
 		return
 	}
+	diag.Debugf("playlist: removing %s", m.list[i])
 	m.list = append(m.list[:i], m.list[i+1:]...)
 	switch {
 	case i < m.cur:
@@ -202,6 +206,7 @@ func (m *model) remove(i int) {
 }
 
 func (m *model) load(dir string) {
+	diag.Debugf("explorer: opening %s", dir)
 	m.dir = dir
 	m.entries = []entry{{"..", true}}
 	es, _ := os.ReadDir(dir)
