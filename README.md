@@ -437,12 +437,12 @@ mpv /path/to/track.flac
 Quit with `q`/`Ctrl-C` (or send `SIGTERM`/`SIGHUP`) rather than killing the
 process.
 
-## Known limitations (0.1.0)
+## For Future Development 
 
-- No search or filtering in the playlist/explorer
-- Directories only on the command line — passing a file does not start playback
-- Playlist state is a flat list of absolute paths
-- No gapless-playback or crossfade controls beyond mpv defaults
+- Search or filtering in the playlist/explorer
+- Directories on the command line, passing a file will start playback
+- Playlist state is a dynamic list 
+- Native dependencies and without relying on mpv and cava
 
 ## Contributing
 
