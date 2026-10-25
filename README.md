@@ -1,9 +1,9 @@
 # muxplayer
 
 A fast, dependency-light TUI music player for Linux, macOS, and Windows, built
-with Go and driven by [mpv](https://mpv.io/). Browse your library, queue
+with Go and driven by [mpv](https://mpv.io/). You can browse your library, queue
 tracks, and enjoy cover art, an accent colour sampled from the artwork, and a
-live [cava](https://github.com/karlstav/cava) visualizer — all inside the
+live [cava](https://github.com/karlstav/cava) visualizer all inside the
 terminal.
 
 ![Version](https://img.shields.io/badge/version-0.5.0-blue)
@@ -12,6 +12,9 @@ terminal.
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 **Current release:** `0.5.0`
+
+# This project is still in development / ! \
+**Please expect some bug and instability and report it to us**
 
 ## Features
 
@@ -79,8 +82,8 @@ sudo apt install mpv cava ffmpeg golang-go
 sudo dnf install mpv cava ffmpeg golang
 ```
 
-> `ffmpeg` may require RPM Fusion on Fedora. Install only `mpv` if you want the
-> smallest setup, then add the optional tools later.
+`ffmpeg` may require RPM Fusion on Fedora. Install only `mpv` if you want the
+smallest setup, then add the optional tools later.
 
 **macOS**
 
@@ -92,20 +95,18 @@ brew install mpv ffmpeg
 **Windows**
 
 ```powershell
-scoop install mpv ffmpeg
-# or: winget install mpv ; winget install Gyan.FFmpeg
-
-# optional visualizer
+winget install shinchiro.mpv
+winget install Gyan.FFmpeg
 winget install karlstav.cava
-# or install cava_win_x64_install.msi from the cava releases page
+# or use scoop
 ```
 
-> On Windows, run muxplayer inside **Windows Terminal** (or any VT-enabled
-> console). cava builds natively for Windows; its `winscap` backend captures
-> the default output device, so the visualizer follows whatever mpv is playing.
-> If you installed cava after opening the terminal, restart it so the updated
-> `PATH` is picked up — muxplayer also looks in `%LOCALAPPDATA%\cava\cava.exe`
-> directly.
+On Windows, run muxplayer inside **Windows Terminal** (or any VT-enabled
+console). cava builds natively for Windows; its `winscap` backend captures
+the default output device, so the visualizer follows whatever mpv is playing.
+If you installed cava after opening the terminal, restart it so the updated
+`PATH` is picked up, muxplayer also looks in `%LOCALAPPDATA%\cava\cava.exe`
+directly.
 
 ### 2. Build and install muxplayer
 
@@ -139,7 +140,7 @@ muxplayer --version # or muxplayer -v
 # muxplayer 0.5.0
 ```
 
-`--version` prints the version and exits immediately — it does not start mpv or
+`--version` prints the version and exits immediately, it does not start mpv or
 open the TUI.
 
 ## Usage
@@ -290,7 +291,6 @@ seek, set the volume, and quit the player. Without a session bus (headless
 sessions, Windows), playback is untouched. Exported artwork for controllers is
 extracted to `~/.cache/muxplayer/art`.
 
-## Visualizer
 
 ## Visualizer
 
