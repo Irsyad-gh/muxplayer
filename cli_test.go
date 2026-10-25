@@ -31,23 +31,26 @@ func TestHasVersionFlag(t *testing.T) {
 func TestParseArgs(t *testing.T) {
 	cases := []struct {
 		args  []string
+		help  bool
 		debug bool
 		child bool
 		dir   string
 		rest  []string
 	}{
-		{[]string{}, false, false, "", nil},
-		{[]string{"--debug"}, true, false, "", nil},
-		{[]string{"-debug", "/music"}, true, false, "/music", []string{"/music"}},
-		{[]string{"/music", "--debug"}, true, false, "/music", []string{"/music"}},
-		{[]string{"--debug-child", "/music"}, false, true, "/music", []string{"/music"}},
-		{[]string{"--verbose", "/music"}, false, false, "/music", []string{"--verbose", "/music"}},
+		{[]string{}, false, false, false, "", nil},
+		{[]string{"--help"}, true, false, false, "", nil},
+		{[]string{"-h", "/music"}, true, false, false, "/music", []string{"/music"}},
+		{[]string{"--debug"}, false, true, false, "", nil},
+		{[]string{"-debug", "/music"}, false, true, false, "/music", []string{"/music"}},
+		{[]string{"/music", "--debug"}, false, true, false, "/music", []string{"/music"}},
+		{[]string{"--debug-child", "/music"}, false, false, true, "/music", []string{"/music"}},
+		{[]string{"--verbose", "/music"}, false, false, false, "/music", []string{"--verbose", "/music"}},
 	}
 	for _, c := range cases {
 		got := parseArgs(c.args)
-		if got.debug != c.debug || got.debugChild != c.child || got.dir != c.dir {
-			t.Errorf("parseArgs(%q) = debug %v child %v dir %q, want %v %v %q",
-				c.args, got.debug, got.debugChild, got.dir, c.debug, c.child, c.dir)
+		if got.help != c.help || got.debug != c.debug || got.debugChild != c.child || got.dir != c.dir {
+			t.Errorf("parseArgs(%q) = help %v debug %v child %v dir %q, want %v %v %v %q",
+				c.args, got.help, got.debug, got.debugChild, got.dir, c.help, c.debug, c.child, c.dir)
 		}
 		if strings.Join(got.args, "\x00") != strings.Join(c.rest, "\x00") {
 			t.Errorf("parseArgs(%q) args = %q, want %q", c.args, got.args, c.rest)
@@ -82,5 +85,37 @@ func TestVersionFlagExitsWithoutStartingApp(t *testing.T) {
 	}
 	if strings.Contains(output, "\x1b[") {
 		t.Errorf("version output contains terminal escape sequences: %q", output)
+	}
+}
+
+// TestHelpFlagExitsWithoutStartingApp re-executes this test binary and runs
+// main with --help. It must print usage and return without touching mpv or
+// the terminal.
+func TestHelpFlagExitsWithoutStartingApp(t *testing.T) {
+	if os.Getenv("MUXPLAYER_TEST_HELP") == "1" {
+		os.Args = []string{"muxplayer", "--help"}
+		main()
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestHelpFlagExitsWithoutStartingApp$")
+	cmd.Env = append(os.Environ(), "MUXPLAYER_TEST_HELP=1")
+	out, err := cmd.CombinedOutput()
+	if ctx.Err() != nil {
+		t.Fatalf("--help did not exit promptly:\n%s", out)
+	}
+	if err != nil {
+		t.Fatalf("--help failed: %v\n%s", err, out)
+	}
+	output := string(out)
+	for _, want := range []string{"muxplayer " + version, "Usage:", "--debug", "--version", "--help"} {
+		if !strings.Contains(output, want) {
+			t.Errorf("help output does not contain %q:\n%s", want, output)
+		}
+	}
+	if strings.Contains(output, "\x1b[") {
+		t.Errorf("help output contains terminal escape sequences: %q", output)
 	}
 }

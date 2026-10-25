@@ -16,7 +16,7 @@ import (
 // version is reported by --version. Override it at build time with:
 //
 //	go build -ldflags "-X main.version=1.2.3"
-var version = "0.4.0"
+var version = "0.5.0"
 
 func main() {
 	os.Exit(run())
@@ -24,6 +24,10 @@ func main() {
 
 func run() (code int) {
 	opts := parseArgs(os.Args[1:])
+	if opts.help {
+		printUsage()
+		return 0
+	}
 	if opts.version {
 		fmt.Printf("muxplayer %s\n", version)
 		fmt.Printf("2026 (C) Irsyad Dzaky Nurghany \n")
@@ -54,11 +58,38 @@ func run() (code int) {
 }
 
 type options struct {
+	help       bool
 	debug      bool
 	debugChild bool
 	version    bool
 	dir        string
 	args       []string // original arguments, minus --debug/--debug-child
+}
+
+// printUsage writes the command's help text. It never starts mpv or the TUI.
+func printUsage() {
+	fmt.Printf(`muxplayer %s a terminal music player based on mpv
+
+Usage:
+  muxplayer [directory]          Start in directory, ~/Music, or $HOME
+  muxplayer --debug [directory]  Run the UI in a new terminal window and
+                                 mirror its debug output in this window
+  muxplayer --version            Print the version and exit
+  muxplayer --help               Show this help and exit
+
+Options:
+  -h,  --help       Show this help and exit
+  -d,  --debug      Enable debug mode (UI in a new terminal window)
+  -v,  --version    Print the version and exit
+
+Environment:
+  MUXPLAYER_TERMINAL       Terminal emulator used by --debug
+  MUXPLAYER_CAVA_INPUT     Force a cava input backend
+  MUXPLAYER_CELL_ASPECT    Cell height / width override for cover art
+  MUXPLAYER_DEBUG          Print debug diagnostics to stderr
+
+Playlist and configuration are saved under $XDG_CONFIG_HOME/muxplayer.
+`, version)
 }
 
 // parseArgs separates the CLI flags from the optional start directory. It
@@ -67,9 +98,11 @@ func parseArgs(args []string) options {
 	var o options
 	for _, a := range args {
 		switch a {
-		case "--version", "-version":
+		case "-h", "--help":
+			o.help = true
+		case "--version", "-v":
 			o.version = true
-		case "--debug", "-debug":
+		case "--debug", "-d":
 			o.debug = true
 		case "--debug-child":
 			o.debugChild = true

@@ -11,7 +11,7 @@ terminal.
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Current release:** `0.2.0`
+**Current release:** `0.5.0`
 
 ## Features
 
@@ -135,8 +135,8 @@ go install .
 ### 3. Verify
 
 ```sh
-muxplayer --version
-# muxplayer 0.1.0
+muxplayer --version # or muxplayer -v
+# muxplayer 0.5.0
 ```
 
 `--version` prints the version and exits immediately — it does not start mpv or
@@ -144,10 +144,11 @@ open the TUI.
 
 ## Usage
 
-```text
+```bash
 muxplayer [directory]
-muxplayer --debug [directory]
-muxplayer --version
+muxplayer --debug [directory]  # or -d
+muxplayer --help               # or -h
+muxplayer --version            # or -v
 ```
 
 | Command | Description |
@@ -155,10 +156,12 @@ muxplayer --version
 | `muxplayer` | Start in `~/Music` if it exists, otherwise `$HOME` |
 | `muxplayer ~/Music` | Start the explorer in a specific directory |
 | `muxplayer --debug` | Open the UI in a new terminal window and stream its diagnostics in the original one |
-| `muxplayer --version` | Print the version and exit (`-version` also works) |
+| `muxplayer --help` | Print usage and exit (`-h` also works) |
+| `muxplayer --version` | Print the version and exit (`-v` also works) |
+| `muxplayer --debug` | The origin terminal show debug mode, while the interface is in new window (`-d` also works) |
 
 The saved playlist is loaded on startup; if it is empty, muxplayer opens on the
-**Explorer** tab so you can pick music right away.
+**Explorer** tab.
 
 ### Debug mode
 
@@ -168,8 +171,8 @@ muxplayer --debug ~/Music
 
 Debug mode launches the player UI in a **new terminal window** and keeps the
 current window as a live console. Every diagnostic line written by the player
-window — terminal size changes, key and mouse input, mpv commands and events,
-cover-art extraction, cava, MPRIS, and shutdown — is mirrored there as it
+window, terminal size changes, key and mouse input, mpv commands and events,
+cover-art extraction, cava, MPRIS, and shutdown, is mirrored there as it
 happens. Close the player window or press `Ctrl-C` in the console to stop both.
 
 muxplayer picks an installed terminal emulator automatically (`$TERMINAL`,
@@ -437,7 +440,6 @@ process.
 ## Known limitations (0.1.0)
 
 - No search or filtering in the playlist/explorer
-- No built-in `--help` screen
 - Directories only on the command line — passing a file does not start playback
 - Playlist state is a flat list of absolute paths
 - No gapless-playback or crossfade controls beyond mpv defaults
