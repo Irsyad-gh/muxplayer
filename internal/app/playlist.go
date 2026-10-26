@@ -210,7 +210,10 @@ func (m *model) remove(i int) {
 func (m *model) load(dir string) {
 	diag.Debugf("explorer: opening %s", dir)
 	m.dir = dir
-	m.entries = []entry{{"..", true}}
+	m.index = nil
+	m.view = nil // old row indexes must not be applied to the new listing
+
+	listing := []entry{{name: "..", dir: true}}
 	es, _ := os.ReadDir(dir)
 	var dirs, files []entry
 	for _, e := range es {
@@ -219,16 +222,29 @@ func (m *model) load(dir string) {
 			continue
 		}
 		if entryIsDir(dir, name, e) {
-			dirs = append(dirs, entry{name, true})
+			dirs = append(dirs, entry{name: name, dir: true})
 			continue
 		}
 		if cover.IsAudio(name) {
-			files = append(files, entry{name, false})
+			files = append(files, entry{name: name})
 		}
 	}
-	m.entries = append(m.entries, dirs...)
-	m.entries = append(m.entries, files...)
+	listing = append(listing, dirs...)
+	listing = append(listing, files...)
+	m.listing = listing
+	m.entries = listing
 	m.sel[1], m.top[1] = 0, 0
+	m.applyFilter()
+}
+
+// entryPath resolves an explorer entry to its absolute path. Recursive search
+// results carry a path relative to the search root; browsing entries do not.
+func (m *model) entryPath(e entry) string {
+	p := e.name
+	if e.rel != "" {
+		p = e.rel
+	}
+	return filepath.Join(m.dir, p)
 }
 
 func entryIsDir(dir, name string, e os.DirEntry) bool {
@@ -246,7 +262,7 @@ func (m *model) listRows() []row {
 	if m.tab == 0 {
 		return playlistRows(m.list, m.cur)
 	}
-	return explorerRows(m.dir, m.entries, m.cur, m.list)
+	return m.explorerRows()
 }
 
 func playlistRows(list []string, cur int) []row {
@@ -261,14 +277,20 @@ func playlistRows(list []string, cur int) []row {
 	return out
 }
 
-func explorerRows(dir string, entries []entry, cur int, list []string) []row {
-	out := make([]row, 0, len(entries))
-	for _, e := range entries {
-		label := "  " + e.name
-		if e.dir {
-			label = "▸ " + e.name + "/"
+func (m *model) explorerRows() []row {
+	out := make([]row, 0, len(m.view))
+	for _, idx := range m.view {
+		e := m.entries[idx]
+		name := e.rel
+		if name == "" {
+			name = e.name
 		}
-		playing := !e.dir && cur >= 0 && list[cur] == filepath.Join(dir, e.name)
+		label := "  " + name
+		if e.dir {
+			label = "▸ " + name + "/"
+		}
+		playing := !e.dir && m.cur >= 0 && m.cur < len(m.list) &&
+			m.list[m.cur] == m.entryPath(e)
 		out = append(out, row{label, playing})
 	}
 	return out
@@ -279,11 +301,11 @@ func (m *model) activate() {
 		m.play(m.sel[0])
 		return
 	}
-	if m.sel[1] >= len(m.entries) {
+	e, ok := m.selectedEntry()
+	if !ok {
 		return
 	}
-	e := m.entries[m.sel[1]]
-	p := filepath.Join(m.dir, e.name)
+	p := m.entryPath(e)
 	if e.dir {
 		m.load(p)
 		return

@@ -30,14 +30,31 @@ func (m *model) onWheel(in input) {
 
 func (m *model) onClick(x, y int) {
 	m.clickTab(x, y)
+	m.clickSearch(x, y)
 	m.clickList(x, y)
 	m.clickBar(x, y)
 	m.clickButton(x, y)
 }
 
+// clickSearch focuses the search bar or flips one of its filter chips.
+func (m *model) clickSearch(x, y int) {
+	if m.tab != 1 {
+		return
+	}
+	switch {
+	case m.hSearch.in(x, y):
+		m.searching = true
+	case m.hType.in(x, y):
+		m.cycleType()
+	case m.hOrder.in(x, y):
+		m.toggleOrder()
+	}
+}
+
 func (m *model) clickTab(x, y int) {
 	for i, r := range m.hTab {
 		if r.in(x, y) {
+			m.searching = false
 			m.tab = i
 		}
 	}
@@ -47,6 +64,7 @@ func (m *model) clickList(x, y int) {
 	if !m.hList.in(x, y) {
 		return
 	}
+	m.searching = false
 	i := m.top[m.tab] + y - m.hList.y
 	if i >= len(m.listRows()) {
 		return

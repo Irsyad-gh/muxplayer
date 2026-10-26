@@ -21,7 +21,7 @@ var pageKeys = map[byte]string{'5': "pgup", '6': "pgdn"}
 
 var controlKeys = map[rune]string{
 	13: "enter", 9: "tab", 32: "space", 127: "backspace", 8: "backspace",
-	3: "ctrl-c", 27: "esc",
+	3: "ctrl-c", 21: "ctrl-u", 27: "esc",
 }
 
 func readInput(ch chan<- input) {

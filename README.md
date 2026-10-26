@@ -6,12 +6,12 @@ tracks, and enjoy cover art, an accent colour sampled from the artwork, and a
 live system-audio visualizer all inside the terminal. Capture and FFT analysis
 are native Go — no cava or other visualizer process is needed.
 
-![Version](https://img.shields.io/badge/version-0.6.3-blue)
+![Version](https://img.shields.io/badge/version-0.7.2-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Current release:** `0.6.3`
+**Current release:** `0.7.2`
 
 # This project is still in development / ! \
 **Please expect some bug and instability and report it to us**
@@ -30,6 +30,8 @@ are native Go — no cava or other visualizer process is needed.
   atomically after every change
 - **Start from the command line** with a folder to browse or an audio file to
   play right away
+- **Explorer search and filter** — type-ahead recursive search by name or `.ext`
+  with relative-path results, file-type cycling, and A-Z/Z-A sorting
 - **Automatic skip** of tracks that fail to play
 - **MPRIS** — desktop widgets and media keys can see and control playback
 - **Debug mode** — `--debug` mirrors live diagnostics in the original window
@@ -224,6 +226,36 @@ stderr.
 | `a` | Add the selected file or folder (recursively) to the playlist — Explorer only |
 | `d` | Remove the selected track from the playlist — Playlist only |
 
+### Explorer search and filter
+
+The Explorer has a search bar above the file list. Press `/` to focus it and
+type directly; the listing updates as you type. Searches are
+**case-insensitive** and scan the folder you are currently browsing **and its
+subdirectories**. Nested matches are shown with paths relative to that folder,
+such as `albums/live.mp3`. The search, type filter, and sort order stay active
+as you navigate.
+
+| Key | Action |
+| --- | --- |
+| `/` | Focus the search bar |
+| typing | Match names anywhere; a term starting with `.` matches that file type |
+| `Backspace` | Delete the last character |
+| `Ctrl-U` | Clear the query |
+| `Enter` | Keep the results and return to the list |
+| `Esc` | Clear the filter and return to the listing |
+| `t` | Cycle the type filter: any, then each file type under this folder |
+| `o` | Toggle result order A-Z / Z-A |
+
+Examples: `live` matches any file or folder whose name contains "live",
+including matches from subfolders; `.flac` shows FLAC files from the whole tree;
+`live .flac` combines both. Extension-only searches list files only. Hidden
+files and folders are skipped. Folders that match a name are listed first so
+you can descend into them; press `Esc` to clear the query and return to normal
+browsing.
+
+Click the search bar to focus it, and click the `t:…` or `o:…` chips to change
+the type filter or sort order with the mouse.
+
 ### Modes
 
 | Key | Action |
@@ -256,6 +288,8 @@ stderr.
 | Click a tab | Switch tabs |
 | Click a row | Select it |
 | Double-click a row | Play it |
+| Click the search bar | Focus the search box (Explorer) |
+| Click `t:…` / `o:…` | Cycle the file-type filter / name order (Explorer) |
 | Wheel over the list | Scroll three rows |
 | Wheel over the right panel | Adjust volume |
 | Click/drag the progress bar | Seek |
@@ -467,7 +501,6 @@ the exact save error.
 
 ## For Future Development 
 
-- Search or filtering in the playlist/explorer
 - Native dependencies and without relying on mpv and ffmpeg
 - macOS CoreAudio process-tap capture for the visualizer
 - Support for other Windows terminals

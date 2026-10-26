@@ -18,6 +18,9 @@ const helpText = " Tab:panel  Enter:play  Space:pause  n/p:track  " +
 	"s:shuffle  r:repeat  [ ]:N×  ←→:seek  +/-:vol  " +
 	"a:add  d:delete  q:quit"
 
+const helpExplorer = " Tab:panel  Enter:open  Bksp:up  /:search  t:type  o:order  " +
+	"a:add  Space:pause  n/p:track  q:quit"
+
 // layout holds the geometry computed once per frame.
 type layout struct {
 	w, h       int
@@ -37,11 +40,16 @@ func (m *model) draw(w, h int) {
 	acc, onAcc := m.colors()
 	box := m.layout(w, h)
 	m.drawTabs(s, box, acc, onAcc)
+	m.drawSearch(s, box, acc, onAcc)
 	m.drawList(s, box, acc, onAcc)
 	m.drawVisualizer(s, box, acc)
 	ty := m.drawCover(s, box, acc, onAcc)
 	m.drawPlayer(s, box, acc, ty)
-	s.text(1, h-1, trunc(helpText, w-2), def, def, aDim, -1)
+	help := helpText
+	if m.tab == 1 {
+		help = helpExplorer
+	}
+	s.text(1, h-1, trunc(help, w-2), def, def, aDim, -1)
 }
 
 func (m *model) resetScreen(w, h int) *screen {
@@ -121,7 +129,80 @@ func (m *model) drawList(s *screen, box layout, acc, onAcc int32) {
 		}
 		s.text(box.lx+1, y, r.text, fg, bg, at, box.lw-2)
 	}
+	if m.tab == 1 && m.filterActive() && len(m.view) <= 1 && box.listH > 1 {
+		s.text(box.lx+1, box.ly+1, "no matches", def, def, aDim, box.lw-2)
+	}
 	m.drawScrollbar(s, box, *top, n, acc)
+}
+
+// drawSearch paints the explorer's search bar and its filter chips. The bar
+// sits on the otherwise empty row between the tabs and the listing.
+func (m *model) drawSearch(s *screen, box layout, acc, onAcc int32) {
+	m.hSearch, m.hType, m.hOrder = rect{}, rect{}, rect{}
+	if m.tab != 1 {
+		return
+	}
+
+	typeLbl := "t:any"
+	if m.typeFilter != "" {
+		typeLbl = "t:" + m.typeFilter
+	}
+	orderLbl := "o:A-Z"
+	if m.sortOrder == orderZA {
+		orderLbl = "o:Z-A"
+	}
+	typeW, orderW := utf8.RuneCountInString(typeLbl), utf8.RuneCountInString(orderLbl)
+	leftW := max(0, box.lw-typeW-orderW-3)
+
+	text, fg, at := "/ search by name or .ext", def, aDim
+	if m.searching {
+		text, fg = "/ "+tailTrunc(m.query, max(0, leftW-3))+"▏", onAcc
+		fillRow(s, box.lx, 2, leftW, acc)
+		at = 0
+	} else if m.query != "" {
+		text, fg, at = "filter: "+m.query, acc, aBold
+	}
+	if !m.searching && m.filterActive() {
+		text += fmt.Sprintf(" (%d)", max(0, len(m.view)-1))
+	}
+	if m.searching {
+		s.text(box.lx, 2, trunc(text, leftW), fg, acc, at, leftW)
+	} else {
+		s.text(box.lx, 2, trunc(text, leftW), fg, def, at, leftW)
+	}
+	m.hSearch = rect{box.lx, 2, leftW, 1}
+
+	x := box.lx + box.lw - orderW - typeW - 2
+	tc, ta := def, aDim
+	if m.typeFilter != "" {
+		tc, ta = acc, aBold
+	}
+	s.text(x, 2, typeLbl, tc, def, ta, typeW)
+	m.hType = rect{x, 2, typeW, 1}
+
+	x += typeW + 2
+	oc, oa := def, aDim
+	if m.sortOrder == orderZA {
+		oc, oa = acc, aBold
+	}
+	s.text(x, 2, orderLbl, oc, def, oa, orderW)
+	m.hOrder = rect{x, 2, orderW, 1}
+}
+
+// tailTrunc keeps the end of s visible, so a long search query stays readable
+// while the cursor sits at its end.
+func tailTrunc(s string, n int) string {
+	if n <= 0 {
+		return ""
+	}
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	if n == 1 {
+		return string(r[len(r)-1:])
+	}
+	return "…" + string(r[len(r)-n+1:])
 }
 
 func (m *model) scrollTo(n int, sel, top *int, listH int) {

@@ -27,6 +27,11 @@ const (
 	repeatN
 )
 
+const (
+	orderAZ = iota
+	orderZA
+)
+
 type rect struct{ x, y, w, h int }
 
 func (r rect) in(x, y int) bool {
@@ -36,6 +41,7 @@ func (r rect) in(x, y int) bool {
 type entry struct {
 	name string
 	dir  bool
+	rel  string // path relative to the explorer root; set for recursive matches
 }
 
 type row struct {
@@ -80,6 +86,17 @@ type model struct {
 	errs           int
 	dirty          bool      // playlist changed and still needs to be written
 	saveAt         time.Time // last save attempt, used to back off on failure
+	// explorer search and filter
+	query      string
+	searching  bool
+	typeFilter string  // lowercase extension such as ".flac"; empty means any
+	sortOrder  int     // orderAZ or orderZA
+	view       []int   // explorer row -> entries index
+	listing    []entry // immediate entries of dir, kept for non-search browsing
+	index      []entry // recursive scan of dir, built lazily for search
+	hSearch    rect
+	hType      rect
+	hOrder     rect
 	// hit areas
 	hTab        [2]rect
 	hList, hBar rect

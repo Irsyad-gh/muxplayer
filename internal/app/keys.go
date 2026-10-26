@@ -41,10 +41,14 @@ func (m *model) cycleRepeat() {
 
 // onKey returns true when the app should quit.
 func (m *model) onKey(k string) bool {
+	if m.typeKey(k) {
+		return false
+	}
 	switch k {
 	case "q", "ctrl-c":
 		return true
 	case "tab":
+		m.searching = false
 		m.tab = 1 - m.tab
 	case "up", "k":
 		m.sel[m.tab]--
@@ -88,6 +92,18 @@ func (m *model) onKey(k string) bool {
 		m.addSelected()
 	case "d":
 		m.deleteSelected()
+	case "/":
+		if m.tab == 1 {
+			m.searching = true
+		}
+	case "t":
+		if m.tab == 1 {
+			m.cycleType()
+		}
+	case "o":
+		if m.tab == 1 {
+			m.toggleOrder()
+		}
 	}
 	return false
 }
@@ -99,14 +115,14 @@ func (m *model) goUpDir() {
 }
 
 func (m *model) addSelected() {
-	if m.tab != 1 || m.sel[1] >= len(m.entries) {
+	if m.tab != 1 {
 		return
 	}
-	e := m.entries[m.sel[1]]
-	if e.name == ".." {
+	e, ok := m.selectedEntry()
+	if !ok || e.name == ".." {
 		return
 	}
-	p := filepath.Join(m.dir, e.name)
+	p := m.entryPath(e)
 	if e.dir {
 		m.addDir(p)
 		return

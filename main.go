@@ -17,7 +17,7 @@ import (
 // version is reported by --version. Override it at build time with:
 //
 //	go build -ldflags "-X main.version=1.2.3"
-var version = "0.6.3"
+var version = "0.7.2"
 
 func main() {
 	os.Exit(run())
@@ -32,7 +32,7 @@ func run() (code int) {
 	if opts.version {
 		fmt.Printf("muxplayer %s\n", version)
 		fmt.Printf("2026 (C) Irsyad Dzaky Nurghany \n")
-		fmt.Printf("https://github.com/Irsyad-gh/muxplayer \n")
+		fmt.Printf("https://github.com/Irsyad-gh/muxplayer MIT License\n")
 		return 0
 	}
 	if opts.debugChild {
@@ -69,7 +69,7 @@ type options struct {
 
 // printUsage writes the command's help text. It never starts mpv or the TUI.
 func printUsage() {
-	fmt.Printf(`muxplayer %s a terminal music player based on mpv
+	fmt.Printf(`muxplayer %s, a terminal music player based on mpv
 
 Usage:
   muxplayer [path]               Start in a directory, ~/Music, or $HOME;
