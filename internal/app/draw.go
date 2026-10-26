@@ -162,8 +162,8 @@ func fillRow(s *screen, x, y, w int, bg int32) {
 
 func (m *model) drawVisualizer(s *screen, box layout, acc int32) {
 	s.text(box.lx, box.sepY, strings.Repeat("─", box.lw+1), acc, def, aDim, -1)
-	if !m.cavaOK {
-		msg := "cava not found — visualizer disabled"
+	if !m.vizOK {
+		msg := "visualizer off — no audio capture"
 		s.ctr(box.lx, box.lw, box.sepY+box.vh/2, msg, def, def, aDim)
 		return
 	}
@@ -173,14 +173,45 @@ func (m *model) drawVisualizer(s *screen, box layout, acc int32) {
 }
 
 func (m *model) drawBars(s *screen, box layout, acc int32) {
-	nb := box.lw / barWidth
-	for b := 0; b < nb; b++ {
-		lo, hi := b*len(m.bars)/nb, (b+1)*len(m.bars)/nb
+	slots, offset := barSlots(box.lw + 1)
+	if slots == 0 || len(m.bars) == 0 {
+		return
+	}
+	for b := 0; b < slots; b++ {
+		lo, hi := mirrorBands(b, slots, len(m.bars))
 		v := barsMax(m.bars, lo, hi)
 		eighths := int(math.Min(1, v) * float64(box.vh*8))
 		col := cover.Pack(cover.Mix(m.accent, cover.RGB{255, 255, 255}, v*.45))
-		m.drawBar(s, box, b, eighths, col)
+		m.drawBar(s, box, offset+b*barWidth, eighths, col)
 	}
+}
+
+// barSlots fits two-cell bars with a one-cell gap into width and returns the
+// left offset that keeps the empty space balanced on both sides.
+func barSlots(width int) (n, offset int) {
+	if width < 2 {
+		return 0, 0
+	}
+	n = (width + 1) / barWidth
+	content := n*barWidth - 1
+	return n, max(0, (width-content)/2)
+}
+
+// mirrorBands maps a display slot to analyser bands. Slots are paired around
+// the centre, with the low frequencies in the middle and the high frequencies
+// at the outer edges, so both halves always draw the same shape.
+func mirrorBands(slot, slots, bands int) (lo, hi int) {
+	if slots <= 1 || bands <= 0 {
+		return 0, bands
+	}
+	mid := (slots - 1) / 2
+	rank := mid - min(slot, slots-1-slot) // 0 at the centre, mid at the edges
+	lo = min(bands-1, rank*bands/(mid+1))
+	hi = (rank + 1) * bands / (mid + 1)
+	if hi <= lo {
+		hi = lo + 1
+	}
+	return lo, min(hi, bands)
 }
 
 func barsMax(bars []float64, lo, hi int) float64 {
@@ -191,14 +222,14 @@ func barsMax(bars []float64, lo, hi int) float64 {
 	return v
 }
 
-func (m *model) drawBar(s *screen, box layout, b, eighths int, col int32) {
+func (m *model) drawBar(s *screen, box layout, x, eighths int, col int32) {
 	for r := 0; r < box.vh; r++ {
 		ch := barGlyph(eighths - r*8)
 		if ch == 0 {
 			continue
 		}
 		y := box.h - 2 - r
-		s.text(box.lx+b*barWidth, y, string([]rune{ch, ch}), col, def, 0, -1)
+		s.text(box.lx+x, y, string([]rune{ch, ch}), col, def, 0, -1)
 	}
 }
 

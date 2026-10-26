@@ -73,7 +73,7 @@ type model struct {
 	aspectOverride float64 // MUXPLAYER_CELL_ASPECT, 0 when unset
 	coverCh        chan coverRes
 	bars           []float64
-	cavaOK         bool
+	vizOK          bool
 	lastClk        time.Time
 	lastRow        int
 	drag           bool

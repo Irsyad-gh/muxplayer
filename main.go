@@ -1,5 +1,5 @@
 // Command muxplayer is a terminal music player. It drives mpv over its JSON
-// IPC socket, draws cava's spectrum, and uses only the Go standard library.
+// IPC socket and draws a spectrum from natively captured system audio.
 package main
 
 import (
@@ -16,7 +16,7 @@ import (
 // version is reported by --version. Override it at build time with:
 //
 //	go build -ldflags "-X main.version=1.2.3"
-var version = "0.5.0"
+var version = "0.6.1"
 
 func main() {
 	os.Exit(run())
@@ -84,7 +84,7 @@ Options:
 
 Environment:
   MUXPLAYER_TERMINAL       Terminal emulator used by --debug
-  MUXPLAYER_CAVA_INPUT     Force a cava input backend
+  MUXPLAYER_AUDIO_SINK     PulseAudio/PipeWire sink to visualize (Linux)
   MUXPLAYER_CELL_ASPECT    Cell height / width override for cover art
   MUXPLAYER_DEBUG          Print debug diagnostics to stderr
 
@@ -98,13 +98,13 @@ func parseArgs(args []string) options {
 	var o options
 	for _, a := range args {
 		switch a {
-		case "-h", "--help":
+		case "-h", "-help", "--help":
 			o.help = true
-		case "--version", "-v":
+		case "-v", "-version", "--version":
 			o.version = true
-		case "--debug", "-d":
+		case "-d", "-debug", "--debug":
 			o.debug = true
-		case "--debug-child":
+		case "-debug-child", "--debug-child":
 			o.debugChild = true
 		default:
 			o.args = append(o.args, a)

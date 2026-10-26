@@ -3,15 +3,15 @@
 A fast, dependency-light TUI music player for Linux, macOS, and Windows, built
 with Go and driven by [mpv](https://mpv.io/). You can browse your library, queue
 tracks, and enjoy cover art, an accent colour sampled from the artwork, and a
-live [cava](https://github.com/karlstav/cava) visualizer all inside the
-terminal.
+live system-audio visualizer all inside the terminal. Capture and FFT analysis
+are native Go — no cava or other visualizer process is needed.
 
-![Version](https://img.shields.io/badge/version-0.5.0-blue)
+![Version](https://img.shields.io/badge/version-0.6.1-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Current release:** `0.5.0`
+**Current release:** `0.6.1`
 
 # This project is still in development / ! \
 **Please expect some bug and instability and report it to us**
@@ -24,14 +24,14 @@ terminal.
 - **Repeat modes** — off, all, one, or repeat N×
 - **Cover art** from embedded tags or folder images, drawn as a true 1:1 square
 - **Adaptive accent colour** sampled from the current cover
-- **cava visualizer** (64 bars at 30 fps, optional)
+- **Native mirrored visualizer** — a 64-band FFT spectrum at 30 fps, captured straight from system audio (Linux and Windows)
 - **Mouse support** — click, double-click, scroll, and drag to seek
 - **Recursive folder import** and a playlist that persists between runs
 - **Automatic skip** of tracks that fail to play
 - **MPRIS** — desktop widgets and media keys can see and control playback
 - **Debug mode** — `--debug` mirrors live diagnostics in the original window
   while the UI runs in a separate terminal window
-- **Stdlib-only Go code** with one dependency (godbus, for the MPRIS interface)
+- **Small dependency set** — no cgo and no external visualizer; godbus is used for MPRIS and a pure-Go PulseAudio client for Linux audio capture
 
 ## Requirements
 
@@ -40,12 +40,12 @@ terminal.
 | Dependency | Required | Purpose |
 | --- | --- | --- |
 | [mpv](https://mpv.io/) | **Yes** | Audio playback and metadata (JSON IPC) |
-| [cava](https://github.com/karlstav/cava) | No | Audio visualizer (Linux/macOS/Windows) |
 | [ffmpeg](https://ffmpeg.org/) | No | Embedded cover-art extraction (including shared artwork for MPRIS controllers) |
 | A **D-Bus session bus** (Linux/macOS) | No | MPRIS desktop controller integration |
 
-The player runs fine without `cava` and `ffmpeg`; you just lose the visualizer
-and cover art respectively.
+The player runs fine without `ffmpeg`; you just lose cover art. The visualizer
+is built in and only needs the operating system's audio output (see
+[Visualizer](#visualizer)).
 
 Other requirements:
 
@@ -66,20 +66,20 @@ Other requirements:
 **Arch Linux**
 
 ```sh
-sudo pacman -S mpv cava ffmpeg go
+sudo pacman -S mpv ffmpeg go
 ```
 
 **Debian / Ubuntu**
 
 ```sh
 sudo apt update
-sudo apt install mpv cava ffmpeg golang-go
+sudo apt install mpv ffmpeg golang-go
 ```
 
 **Fedora**
 
 ```sh
-sudo dnf install mpv cava ffmpeg golang
+sudo dnf install mpv ffmpeg golang
 ```
 
 `ffmpeg` may require RPM Fusion on Fedora. Install only `mpv` if you want the
@@ -89,7 +89,8 @@ smallest setup, then add the optional tools later.
 
 ```sh
 brew install mpv ffmpeg
-# cava is optional — install it if your setup provides it, for the visualizer
+# macOS system-audio capture is not implemented yet, so the built-in
+# visualizer is unavailable there. Playback and cover art work normally.
 ```
 
 **Windows**
@@ -97,16 +98,12 @@ brew install mpv ffmpeg
 ```powershell
 winget install shinchiro.mpv
 winget install Gyan.FFmpeg
-winget install karlstav.cava
 # or use scoop
 ```
 
 On Windows, run muxplayer inside **Windows Terminal** (or any VT-enabled
-console). cava builds natively for Windows; its `winscap` backend captures
-the default output device, so the visualizer follows whatever mpv is playing.
-If you installed cava after opening the terminal, restart it so the updated
-`PATH` is picked up, muxplayer also looks in `%LOCALAPPDATA%\cava\cava.exe`
-directly.
+console). The visualizer uses WASAPI loopback on the default output device, so
+it follows whatever mpv is playing without any extra setup.
 
 ### 2. Build and install muxplayer
 
@@ -137,7 +134,6 @@ go install .
 
 ```sh
 muxplayer --version # or muxplayer -v
-# muxplayer 0.5.0
 ```
 
 `--version` prints the version and exits immediately, it does not start mpv or
@@ -173,7 +169,7 @@ muxplayer --debug ~/Music
 Debug mode launches the player UI in a **new terminal window** and keeps the
 current window as a live console. Every diagnostic line written by the player
 window, terminal size changes, key and mouse input, mpv commands and events,
-cover-art extraction, cava, MPRIS, and shutdown, is mirrored there as it
+cover-art extraction, audio capture, MPRIS, and shutdown, is mirrored there as it
 happens. Close the player window or press `Ctrl-C` in the console to stop both.
 
 muxplayer picks an installed terminal emulator automatically (`$TERMINAL`,
@@ -294,24 +290,34 @@ extracted to `~/.cache/muxplayer/art`.
 
 ## Visualizer
 
-When `cava` is installed, muxplayer launches it with a generated config using
-64 bars and ASCII output, then renders the bars under the playlist. Without
-`cava`, the player still works and shows a short notice instead.
+muxplayer captures system audio itself and renders a mirrored 64-band spectrum
+under the playlist. Low frequencies sit in the middle and high frequencies at
+the edges, so the visualization stays balanced on both sides. There is no cava
+process and no generated cava config: the capture readers and FFT analyser are
+part of the Go binary.
 
-cava runs on Linux, macOS, and Windows. On Windows it captures the default
-output device through WASAPI loopback, so no extra setup is required. On
-Linux/macOS, if cava picks the wrong audio backend, select one explicitly:
+- **Linux:** talks to PulseAudio over its native protocol. PipeWire works
+  through its PulseAudio compatibility server (`pipewire-pulse`). The monitor
+  source of the default output sink is captured.
+- **Windows:** uses WASAPI loopback on the default output device, so no extra
+  setup is required.
+- **macOS:** native system-audio capture is not implemented yet. Playback works
+  normally, but the visualizer shows a short notice. macOS does not expose the
+  output mix to ordinary applications without a CoreAudio process tap or a
+  loopback device.
+
+The visualizer is optional: if no audio server or output device is available,
+muxplayer still starts normally.
+
+If Linux captures the wrong output, list your sinks and choose one by name:
 
 ```sh
-MUXPLAYER_CAVA_INPUT=pipewire muxplayer ~/Music
-MUXPLAYER_CAVA_INPUT=pulse muxplayer ~/Music
-MUXPLAYER_CAVA_INPUT=alsa muxplayer ~/Music
+pactl list short sinks
+MUXPLAYER_AUDIO_SINK=alsa_output.pci-0000_03_00.6.HiFi__Speaker__sink muxplayer ~/Music
 ```
 
-Any input method understood by cava can be used. `MUXPLAYER_CAVA_INPUT` is
-ignored on Windows, where cava's Windows build only supports its built-in
-loopback capture. If you install cava with the MSI or winget, use version
-1.0.0 or newer.
+The PulseAudio client also honours `PULSE_SERVER` if your server is not at the
+default location.
 
 ## Configuration and files
 
@@ -322,7 +328,6 @@ muxplayer has no config file — just a few files generated at runtime:
 | `$XDG_CONFIG_HOME/muxplayer/playlist.txt` | Saved playlist (defaults to `~/.config/muxplayer/playlist.txt`) |
 | `$XDG_CACHE_HOME/muxplayer/art/` | Artwork extracted for MPRIS controllers |
 | temp dir `muxplayer-<pid>.sock` (Unix) / `\\.\pipe\muxplayer-<pid>` (Windows) | mpv JSON IPC endpoint |
-| temp dir `muxplayer-cava-<pid>.conf` | Generated cava config |
 
 Only tracks that still exist are restored from the saved playlist. The playlist
 is written when you quit with `q`/`Ctrl-C`, or when the process receives
@@ -330,7 +335,7 @@ is written when you quit with `q`/`Ctrl-C`, or when the process receives
 
 | Environment variable | Description |
 | --- | --- |
-| `MUXPLAYER_CAVA_INPUT` | Force a cava input method (`pulse`, `pipewire`, `alsa`, …); ignored on Windows |
+| `MUXPLAYER_AUDIO_SINK` | PulseAudio/PipeWire sink name to visualize; empty uses the default output (Linux) |
 | `MUXPLAYER_CELL_ASPECT` | Cell height ÷ cell width, overriding terminal detection for the square cover (default `2`; try `1` on square-cell terminals) |
 | `MUXPLAYER_TERMINAL` | Terminal emulator used by `--debug` on Linux/macOS (executable name or path) |
 | `MUXPLAYER_DEBUG` | Print debug diagnostics to stderr without opening a second window |
@@ -356,8 +361,10 @@ GOOS=darwin  GOARCH=arm64 go build -o muxplayer-mac .
 GOOS=windows GOARCH=amd64 go build -o muxplayer.exe .
 ```
 
-The Go code uses **one third-party module** — [godbus/dbus](https://github.com/godbus/dbus),
-for the MPRIS D-Bus interface — on every platform. Platform-specific files sit
+The Go code uses two small third-party modules: [godbus/dbus](https://github.com/godbus/dbus)
+for MPRIS and [jfreymuth/pulse](https://github.com/jfreymuth/pulse), a pure-Go
+PulseAudio client used by the Linux capture backend. Neither requires cgo, and
+the visualizer does not launch an external program. Platform-specific files sit
 next to the package they serve (see [Project layout](#project-layout)) and are
 selected with build tags.
 
@@ -373,7 +380,8 @@ go build -ldflags "-X main.version=0.1.0" -o muxplayer .
 main.go                 command entry point: flags, startup, mpv launch
 internal/
 ├── app/                TUI state, playlist, drawing, keyboard/mouse, cover view
-├── cava/               cava process, config and raw bar stream
+├── audiocap/           native system-audio capture (PulseAudio/PipeWire, WASAPI)
+├── visualizer/         reusable FFT analyser, sample ring and frame loop
 ├── cover/              artwork loading (ffmpeg) and colour helpers
 ├── debugmode/          --debug terminal launcher and log mirroring
 ├── diag/               stderr logging
@@ -382,9 +390,16 @@ internal/
 └── term/               raw mode, terminal size, signals
 ```
 
-Platform code lives beside what it serves: `term/raw_unix.go` and
-`term/raw_windows.go`, `term/signals_*`, `term/termios_*`, `mpv/ipc_*`, and
-`cava/input_*`.
+The audio and visualizer packages are intentionally independent of the TUI and
+of each other's internals. `audiocap` exposes a pull-based `Source` of
+interleaved float32 samples; `visualizer` turns any `Source` into bar frames.
+A new capture backend only needs to implement `Source` in a file with the right
+build tag, and a new consumer can reuse `visualizer.Analyzer` without opening
+system audio at all.
+
+Platform code lives beside what it serves: `term/raw_unix.go`,
+`term/raw_windows.go`, `term/signals_*`, `term/termios_*`, `mpv/ipc_*`,
+`audiocap/capture_*`, and `mpris/server_*`.
 
 ## Troubleshooting
 
@@ -395,9 +410,13 @@ Install `mpv` and make sure it is on your `PATH`:
 mpv --version
 ```
 
-**`cava not found — visualizer disabled`**
-Install `cava`, or ignore it if you don't need the visualizer. On Windows:
-`winget install karlstav.cava`, then reopen the terminal.
+**`visualizer off — no audio capture`**
+The built-in visualizer could not open system audio. On Linux, make sure
+PulseAudio or PipeWire's PulseAudio server is running (`pactl info`), and
+optionally pick a sink with `MUXPLAYER_AUDIO_SINK`. On Windows, check that the
+default output device is available. On macOS, native system-audio capture is
+not implemented yet. Run with `MUXPLAYER_DEBUG=1` to see the exact capture
+error.
 
 **No cover art**
 Install `ffmpeg` for embedded artwork, or place one of the folder images listed
@@ -409,10 +428,10 @@ terminals that do not report it, set the ratio by hand — for example
 `MUXPLAYER_CELL_ASPECT=1` for square cells or the usual `2` for 1:2 cells.
 
 **Visualizer is flat or reacts to the wrong output**
-On Linux/macOS, set `MUXPLAYER_CAVA_INPUT` to your audio backend. You can test
-cava separately with `cava` to confirm it sees the audio. On Windows, cava
-always visualizes the default output device — check that mpv and cava use the
-same one.
+On Linux, check `pactl get-default-sink` and `pactl list short sinks`, then set
+`MUXPLAYER_AUDIO_SINK` to the sink where mpv is playing. On Windows, the
+visualizer follows the default output device, so make sure mpv uses that same
+device.
 
 **`terminal too small (min 60x18)`**
 Enlarge the terminal window.
@@ -442,7 +461,8 @@ process.
 - Search or filtering in the playlist/explorer
 - Directories on the command line, passing a file will start playback
 - Playlist state is a dynamic list 
-- Native dependencies and without relying on mpv and cava
+- Native dependencies and without relying on mpv
+- macOS CoreAudio process-tap capture for the visualizer
 
 ## Contributing
 

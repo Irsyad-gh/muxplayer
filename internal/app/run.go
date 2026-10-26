@@ -11,11 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"muxplayer/internal/cava"
+	"muxplayer/internal/audiocap"
 	"muxplayer/internal/diag"
 	"muxplayer/internal/mpris"
 	"muxplayer/internal/mpv"
 	"muxplayer/internal/term"
+	"muxplayer/internal/visualizer"
 )
 
 // Run opens dir and runs the TUI until the user quits.
@@ -70,9 +71,22 @@ func run(m *model, mpr *mpris.Server) {
 	restore := term.Raw()
 	inCh := make(chan input, 64)
 	go readInput(inCh)
-	cavaCh := make(chan []float64, 4)
-	viz := cava.Start(cavaCh)
-	m.cavaOK = viz != nil
+	vizCh := make(chan []float64, 4)
+	viz, err := visualizer.Start(vizCh, visualizer.Config{
+		Bars: 64,
+		FPS:  30,
+		Audio: audiocap.Options{
+			Device: os.Getenv("MUXPLAYER_AUDIO_SINK"),
+		},
+		OnError: func(err error) {
+			diag.Debugf("visualizer: capture failed: %v", err)
+		},
+	})
+	if err != nil {
+		diag.Debugf("visualizer disabled: %v", err)
+	} else {
+		m.vizOK = true
+	}
 	sigCh := make(chan os.Signal, 1)
 	term.WatchSignals(sigCh)
 	tick := time.NewTicker(33 * time.Millisecond)
@@ -101,7 +115,7 @@ func run(m *model, mpr *mpris.Server) {
 				continue
 			}
 			m.handleEvent(ev)
-		case bars := <-cavaCh:
+		case bars := <-vizCh:
 			m.bars = bars
 		case res := <-m.coverCh:
 			m.handleCover(res)
@@ -123,15 +137,13 @@ func run(m *model, mpr *mpris.Server) {
 }
 
 // shutdown centralises process cleanup: terminal, playlist, children, signals.
-func shutdown(m *model, mpr *mpris.Server, viz *cava.Visualizer, restore func(), sigCh chan os.Signal, tick *time.Ticker) {
+func shutdown(m *model, mpr *mpris.Server, viz *visualizer.Visualizer, restore func(), sigCh chan os.Signal, tick *time.Ticker) {
 	diag.Debugf("app: shutting down")
 	restore()
 	m.savePlaylist()
 	m.mp.Close()
 	mpr.Close()
-	if viz != nil {
-		viz.Close()
-	}
+	viz.Close()
 	signal.Stop(sigCh)
 	tick.Stop()
 }
