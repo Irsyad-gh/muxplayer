@@ -145,6 +145,31 @@ func TestShuffleRepeat(t *testing.T) {
 	}
 }
 
+// TestStartTrackPlaysFile covers the command-line start track: a known track
+// is selected without touching the playlist, a new one is appended and saved.
+func TestStartTrackPlaysFile(t *testing.T) {
+	m := newTestModel()
+	m.dirty = false
+	m.startTrack("/b/3.mp3")
+	if m.cur != 2 {
+		t.Fatalf("cur = %d, want 2 for an existing track", m.cur)
+	}
+	if m.dirty {
+		t.Fatal("starting an existing track should not change the playlist")
+	}
+
+	m.startTrack("/new/6.mp3")
+	if got := m.list[len(m.list)-1]; got != "/new/6.mp3" {
+		t.Fatalf("last track = %q, want /new/6.mp3", got)
+	}
+	if m.cur != len(m.list)-1 {
+		t.Fatalf("cur = %d, want the newly added track %d", m.cur, len(m.list)-1)
+	}
+	if !m.dirty {
+		t.Fatal("starting a new track should schedule a playlist save")
+	}
+}
+
 // TestWriteFileAtomic checks that saving replaces the playlist in one step and
 // leaves no temp files behind.
 func TestWriteFileAtomic(t *testing.T) {

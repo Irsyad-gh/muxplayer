@@ -19,17 +19,28 @@ import (
 	"muxplayer/internal/visualizer"
 )
 
-// Run opens dir and runs the TUI until the user quits.
-func Run(p *mpv.Player, dir string) {
+// Run opens dir and runs the TUI until the user quits. A non-empty track is
+// added to the playlist and starts playing immediately.
+func Run(p *mpv.Player, dir, track string) {
 	m := newModel(p)
 	m.load(dir)
-	if len(m.list) == 0 {
+	if track != "" {
+		m.startTrack(track)
+	} else if len(m.list) == 0 {
 		m.tab = 1
 	}
 	diag.Debugf("app: starting in %s (%d tracks in playlist)", dir, len(m.list))
 	mpr := mpris.Start()
 	diag.Debugf("app: MPRIS available: %v", mpr != nil)
 	run(m, mpr)
+}
+
+// startTrack adds track to the playlist when it is missing and begins playback.
+func (m *model) startTrack(track string) {
+	if track == "" {
+		return
+	}
+	m.play(m.add(track))
 }
 
 // view tracks the previous frame for diffed rendering and resize handling.

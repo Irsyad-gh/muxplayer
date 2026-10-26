@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"muxplayer/internal/app"
+	"muxplayer/internal/cover"
 	"muxplayer/internal/debugmode"
 	"muxplayer/internal/diag"
 	"muxplayer/internal/mpv"
@@ -16,7 +17,7 @@ import (
 // version is reported by --version. Override it at build time with:
 //
 //	go build -ldflags "-X main.version=1.2.3"
-var version = "0.6.2"
+var version = "0.6.3"
 
 func main() {
 	os.Exit(run())
@@ -51,9 +52,9 @@ func run() (code int) {
 		diag.Errf("failed to start mpv (is it installed?): %v", err)
 		return 1
 	}
-	dir := startDir(opts.dir)
+	dir, track := startTarget(opts.path)
 	diag.Debugf("opening %s", dir)
-	app.Run(player, dir)
+	app.Run(player, dir, track)
 	return 0
 }
 
@@ -62,7 +63,7 @@ type options struct {
 	debug      bool
 	debugChild bool
 	version    bool
-	dir        string
+	path       string   // optional start directory or audio file
 	args       []string // original arguments, minus --debug/--debug-child
 }
 
@@ -71,8 +72,9 @@ func printUsage() {
 	fmt.Printf(`muxplayer %s a terminal music player based on mpv
 
 Usage:
-  muxplayer [directory]          Start in directory, ~/Music, or $HOME
-  muxplayer --debug [directory]  Run the UI in a new terminal window and
+  muxplayer [path]               Start in a directory, ~/Music, or $HOME;
+                                 an audio file starts playing immediately
+  muxplayer --debug [path]       Run the UI in a new terminal window and
                                  mirror its debug output in this window
   muxplayer --version            Print the version and exit
   muxplayer --help               Show this help and exit
@@ -92,8 +94,8 @@ Playlist and configuration are saved under $XDG_CONFIG_HOME/muxplayer.
 `, version)
 }
 
-// parseArgs separates the CLI flags from the optional start directory. It
-// keeps the remaining arguments so debug mode can pass them to the child.
+// parseArgs separates the CLI flags from the optional start path. It keeps the
+// remaining arguments so debug mode can pass them to the child.
 func parseArgs(args []string) options {
 	var o options
 	for _, a := range args {
@@ -108,8 +110,8 @@ func parseArgs(args []string) options {
 			o.debugChild = true
 		default:
 			o.args = append(o.args, a)
-			if o.dir == "" && !isFlag(a) {
-				o.dir = a
+			if o.path == "" && !isFlag(a) {
+				o.path = a
 			}
 		}
 	}
@@ -127,23 +129,49 @@ func hasVersionFlag(args []string) bool {
 	return false
 }
 
-// startDir picks the folder to open on launch: a CLI argument if given, else
-// ~/Music when it exists, else the home directory.
-func startDir(arg string) string {
-	home, _ := os.UserHomeDir()
-	dir := home
-	if music := filepath.Join(home, "Music"); isDir(music) {
-		dir = music
+// startTarget resolves the optional CLI argument. A directory becomes the
+// explorer root; a supported audio file becomes that directory plus a track to
+// play. Anything else is ignored in favour of the default start directory.
+func startTarget(arg string) (dir, track string) {
+	dir = defaultDir()
+	if arg == "" {
+		return dir, ""
 	}
-	if arg != "" {
-		if abs, err := filepath.Abs(arg); err == nil {
-			dir = abs
+	abs, err := filepath.Abs(arg)
+	if err != nil {
+		diag.Warnf("ignoring %q: %v", arg, err)
+		return dir, ""
+	}
+	switch {
+	case isDir(abs):
+		return abs, ""
+	case isFile(abs):
+		if !cover.IsAudio(abs) {
+			diag.Warnf("not a supported audio file: %s", abs)
+			return dir, ""
 		}
+		return filepath.Dir(abs), abs
+	default:
+		diag.Warnf("no such file or directory: %s", abs)
+		return dir, ""
 	}
-	return dir
+}
+
+// defaultDir prefers ~/Music when it exists, else the home directory.
+func defaultDir() string {
+	home, _ := os.UserHomeDir()
+	if music := filepath.Join(home, "Music"); isDir(music) {
+		return music
+	}
+	return home
 }
 
 func isDir(p string) bool {
 	st, err := os.Stat(p)
 	return err == nil && st.IsDir()
+}
+
+func isFile(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && st.Mode().IsRegular()
 }

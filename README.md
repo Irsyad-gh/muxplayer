@@ -6,12 +6,12 @@ tracks, and enjoy cover art, an accent colour sampled from the artwork, and a
 live system-audio visualizer all inside the terminal. Capture and FFT analysis
 are native Go — no cava or other visualizer process is needed.
 
-![Version](https://img.shields.io/badge/version-0.6.1-blue)
+![Version](https://img.shields.io/badge/version-0.6.3-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Current release:** `0.6.2`
+**Current release:** `0.6.3`
 
 # This project is still in development / ! \
 **Please expect some bug and instability and report it to us**
@@ -28,6 +28,8 @@ are native Go — no cava or other visualizer process is needed.
 - **Mouse support** — click, double-click, scroll, and drag to seek
 - **Recursive folder import** and a playlist that persists between runs, saved
   atomically after every change
+- **Start from the command line** with a folder to browse or an audio file to
+  play right away
 - **Automatic skip** of tracks that fail to play
 - **MPRIS** — desktop widgets and media keys can see and control playback
 - **Debug mode** — `--debug` mirrors live diagnostics in the original window
@@ -144,16 +146,17 @@ open the TUI.
 ## Usage
 
 ```bash
-muxplayer [directory]
-muxplayer --debug [directory]  # or -d
-muxplayer --help               # or -h
-muxplayer --version            # or -v
+muxplayer [directory|file]
+muxplayer --debug [directory|file]  # or -d
+muxplayer --help                    # or -h
+muxplayer --version                 # or -v
 ```
 
 | Command | Description |
 | --- | --- |
 | `muxplayer` | Start in `~/Music` if it exists, otherwise `$HOME` |
 | `muxplayer ~/Music` | Start the explorer in a specific directory |
+| `muxplayer ~/Music/song.mp3` | Open the track's folder, add it to the playlist, and start playing |
 | `muxplayer --debug` | Open the UI in a new terminal window and stream its diagnostics in the original one |
 | `muxplayer --help` | Print usage and exit (`-h` also works) |
 | `muxplayer --version` | Print the version and exit (`-v` also works) |
@@ -405,16 +408,16 @@ Platform code lives beside what it serves: `term/raw_unix.go`,
 `term/raw_windows.go`, `term/signals_*`, `term/termios_*`, `mpv/ipc_*`,
 `audiocap/capture_*`, and `mpris/server_*`.
 
-## Troubleshooting
+## FAQ
 
-**`failed to start mpv (is it installed?)`**
+1. **failed to start mpv (is it installed?)**
 Install `mpv` and make sure it is on your `PATH`:
 
 ```sh
 mpv --version
 ```
 
-**`visualizer off — no audio capture`**
+2. **Visulizer off ?**
 The built-in visualizer could not open system audio. On Linux, make sure
 PulseAudio or PipeWire's PulseAudio server is running (`pactl info`), and
 optionally pick a sink with `MUXPLAYER_AUDIO_SINK`. On Windows, check that the
@@ -422,41 +425,41 @@ default output device is available. On macOS, native system-audio capture is
 not implemented yet. Run with `MUXPLAYER_DEBUG=1` to see the exact capture
 error.
 
-**No cover art**
+3. **No cover art**
 Install `ffmpeg` for embedded artwork, or place one of the folder images listed
 above next to the track. Some files simply contain no artwork.
 
-**Cover looks stretched (not square)**
+4. **Cover looks stretched (not square)**
 muxplayer normally detects your terminal's cell pixel size automatically. On
 terminals that do not report it, set the ratio by hand — for example
 `MUXPLAYER_CELL_ASPECT=1` for square cells or the usual `2` for 1:2 cells.
 
-**Visualizer is flat or reacts to the wrong output**
+5. **Visualizer is flat or reacts to the wrong output**
 On Linux, check `pactl get-default-sink` and `pactl list short sinks`, then set
 `MUXPLAYER_AUDIO_SINK` to the sink where mpv is playing. On Windows, the
 visualizer follows the default output device, so make sure mpv uses that same
 device.
 
-**`terminal too small (min 60x18)`**
+6. **`terminal too small (min 60x18)`**
 Enlarge the terminal window.
 
-**`--debug` does not open a window**
+7. **`--debug` does not open a window**
 muxplayer could not find a terminal emulator. Set one explicitly, for example
 `MUXPLAYER_TERMINAL=kitty muxplayer --debug`, or run inside tmux (which opens a
 new tmux window instead).
 
-**Colours look wrong**
+8. **Colours look wrong**
 Use a terminal with truecolour support and a font that includes block and
 box-drawing glyphs.
 
-**No sound**
+9. **No sound**
 Check that mpv itself can play the file:
 
 ```sh
 mpv /path/to/track.mp3
 ```
 
-**Playlist did not persist**
+10. **Playlist did not persist**
 Playlist changes are saved atomically within a fraction of a second, so even a
 crash or `SIGKILL` keeps them. If the file still looks stale, check that
 `$XDG_CONFIG_HOME/muxplayer` is writable and run with `MUXPLAYER_DEBUG=1` to see
@@ -465,7 +468,6 @@ the exact save error.
 ## For Future Development 
 
 - Search or filtering in the playlist/explorer
-- Directories on the command line, passing a file will start playback
 - Native dependencies and without relying on mpv and ffmpeg
 - macOS CoreAudio process-tap capture for the visualizer
 - Support for other Windows terminals

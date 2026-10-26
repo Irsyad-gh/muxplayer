@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +35,7 @@ func TestParseArgs(t *testing.T) {
 		help  bool
 		debug bool
 		child bool
-		dir   string
+		path  string
 		rest  []string
 	}{
 		{[]string{}, false, false, false, "", nil},
@@ -48,13 +49,48 @@ func TestParseArgs(t *testing.T) {
 	}
 	for _, c := range cases {
 		got := parseArgs(c.args)
-		if got.help != c.help || got.debug != c.debug || got.debugChild != c.child || got.dir != c.dir {
-			t.Errorf("parseArgs(%q) = help %v debug %v child %v dir %q, want %v %v %v %q",
-				c.args, got.help, got.debug, got.debugChild, got.dir, c.help, c.debug, c.child, c.dir)
+		if got.help != c.help || got.debug != c.debug || got.debugChild != c.child || got.path != c.path {
+			t.Errorf("parseArgs(%q) = help %v debug %v child %v path %q, want %v %v %v %q",
+				c.args, got.help, got.debug, got.debugChild, got.path, c.help, c.debug, c.child, c.path)
 		}
 		if strings.Join(got.args, "\x00") != strings.Join(c.rest, "\x00") {
 			t.Errorf("parseArgs(%q) args = %q, want %q", c.args, got.args, c.rest)
 		}
+	}
+}
+
+// TestStartTarget checks how the CLI argument is turned into an explorer
+// directory and an optional track to play on launch.
+func TestStartTarget(t *testing.T) {
+	dir := t.TempDir()
+	audio := filepath.Join(dir, "song.mp3")
+	if err := os.WriteFile(audio, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	other := filepath.Join(dir, "notes.txt")
+	if err := os.WriteFile(other, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name  string
+		arg   string
+		wantD string
+		wantT string
+	}{
+		{"no argument", "", defaultDir(), ""},
+		{"directory", dir, dir, ""},
+		{"audio file", audio, dir, audio},
+		{"other file", other, defaultDir(), ""},
+		{"missing path", filepath.Join(dir, "gone.flac"), defaultDir(), ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			gotDir, gotTrack := startTarget(c.arg)
+			if gotDir != c.wantD || gotTrack != c.wantT {
+				t.Errorf("startTarget(%q) = %q, %q; want %q, %q", c.arg, gotDir, gotTrack, c.wantD, c.wantT)
+			}
+		})
 	}
 }
 
