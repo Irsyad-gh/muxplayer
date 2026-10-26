@@ -130,6 +130,9 @@ func run(m *model, mpr *mpris.Server) {
 			}
 			v.invalidate()
 		case <-tick.C:
+			// Persist playlist changes as they happen so a crash or an
+			// unclean exit cannot lose them.
+			m.flushPlaylist()
 			mpr.Update(m.snapshot())
 			v.render(m)
 		}
@@ -148,6 +151,26 @@ func shutdown(m *model, mpr *mpris.Server, viz *visualizer.Visualizer, restore f
 	tick.Stop()
 }
 
+// changed marks the playlist as modified so the next tick writes it to disk.
+func (m *model) changed() {
+	m.dirty = true
+	m.saveAt = time.Time{} // flush on the next tick
+}
+
+// flushPlaylist saves the playlist when it changed. After a failed attempt it
+// backs off for a second, so a read-only config directory does not retry on
+// every frame.
+func (m *model) flushPlaylist() {
+	if !m.dirty {
+		return
+	}
+	if !m.saveAt.IsZero() && time.Since(m.saveAt) < time.Second {
+		return
+	}
+	m.saveAt = time.Now()
+	m.savePlaylist()
+}
+
 func (m *model) savePlaylist() {
 	path := plPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -155,7 +178,48 @@ func (m *model) savePlaylist() {
 		return
 	}
 	data := []byte(strings.Join(m.list, "\n"))
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := writeFileAtomic(path, data, 0o644); err != nil {
 		diag.Warnf("cannot save playlist: %v", err)
+		return
 	}
+	m.dirty = false
+}
+
+// writeFileAtomic replaces path with data in one step. The temp file lives in
+// the same directory so the rename never crosses file systems; after a crash
+// the disk holds either the old playlist or the new one, never a partial one.
+func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
+	dir := filepath.Dir(path)
+	f, err := os.CreateTemp(dir, "."+filepath.Base(path)+".*")
+	if err != nil {
+		return err
+	}
+	tmp := f.Name()
+	defer os.Remove(tmp) // no-op once the rename has succeeded
+
+	if err := f.Chmod(perm); err != nil {
+		f.Close()
+		return err
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	// Best effort: make the rename itself durable. Directory sync is not
+	// supported everywhere, so its failure is not treated as an error.
+	if d, err := os.Open(dir); err == nil {
+		_ = d.Sync()
+		_ = d.Close()
+	}
+	return nil
 }

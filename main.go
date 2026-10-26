@@ -16,7 +16,7 @@ import (
 // version is reported by --version. Override it at build time with:
 //
 //	go build -ldflags "-X main.version=1.2.3"
-var version = "0.6.1"
+var version = "0.6.2"
 
 func main() {
 	os.Exit(run())

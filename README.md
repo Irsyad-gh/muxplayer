@@ -11,7 +11,7 @@ are native Go — no cava or other visualizer process is needed.
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Current release:** `0.6.1`
+**Current release:** `0.6.2`
 
 # This project is still in development / ! \
 **Please expect some bug and instability and report it to us**
@@ -26,7 +26,8 @@ are native Go — no cava or other visualizer process is needed.
 - **Adaptive accent colour** sampled from the current cover
 - **Native mirrored visualizer** — a 64-band FFT spectrum at 30 fps, captured straight from system audio (Linux and Windows)
 - **Mouse support** — click, double-click, scroll, and drag to seek
-- **Recursive folder import** and a playlist that persists between runs
+- **Recursive folder import** and a playlist that persists between runs, saved
+  atomically after every change
 - **Automatic skip** of tracks that fail to play
 - **MPRIS** — desktop widgets and media keys can see and control playback
 - **Debug mode** — `--debug` mirrors live diagnostics in the original window
@@ -331,8 +332,10 @@ muxplayer has no config file — just a few files generated at runtime:
 | temp dir `muxplayer-<pid>.sock` (Unix) / `\\.\pipe\muxplayer-<pid>` (Windows) | mpv JSON IPC endpoint |
 
 Only tracks that still exist are restored from the saved playlist. The playlist
-is written when you quit with `q`/`Ctrl-C`, or when the process receives
-`SIGTERM`/`SIGHUP` (Unix); killing it with `SIGKILL` will not save changes.
+is written shortly after every change, so a crash, `SIGKILL`, or a power cut
+cannot lose it. Each save goes to a temporary file that is atomically renamed
+over the old one, which means an interrupted save leaves the previous playlist
+intact instead of a truncated file.
 
 | Environment variable | Description |
 | --- | --- |
@@ -450,20 +453,24 @@ box-drawing glyphs.
 Check that mpv itself can play the file:
 
 ```sh
-mpv /path/to/track.flac
+mpv /path/to/track.mp3
 ```
 
 **Playlist did not persist**
-Quit with `q`/`Ctrl-C` (or send `SIGTERM`/`SIGHUP`) rather than killing the
-process.
+Playlist changes are saved atomically within a fraction of a second, so even a
+crash or `SIGKILL` keeps them. If the file still looks stale, check that
+`$XDG_CONFIG_HOME/muxplayer` is writable and run with `MUXPLAYER_DEBUG=1` to see
+the exact save error.
 
 ## For Future Development 
 
 - Search or filtering in the playlist/explorer
 - Directories on the command line, passing a file will start playback
-- Playlist state is a dynamic list 
-- Native dependencies and without relying on mpv
+- Native dependencies and without relying on mpv and ffmpeg
 - macOS CoreAudio process-tap capture for the visualizer
+- Support for other Windows terminals
+- Visualizer only on less than 60x18 window
+- More customization
 
 ## Contributing
 

@@ -172,6 +172,7 @@ func (m *model) add(p string) int {
 	}
 	m.list = append(m.list, p)
 	m.rebuild()
+	m.changed()
 	return len(m.list) - 1
 }
 
@@ -203,6 +204,7 @@ func (m *model) remove(i int) {
 		m.mp.Do("stop")
 	}
 	m.rebuild()
+	m.changed()
 }
 
 func (m *model) load(dir string) {

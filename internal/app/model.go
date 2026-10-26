@@ -78,6 +78,8 @@ type model struct {
 	lastRow        int
 	drag           bool
 	errs           int
+	dirty          bool      // playlist changed and still needs to be written
+	saveAt         time.Time // last save attempt, used to back off on failure
 	// hit areas
 	hTab        [2]rect
 	hList, hBar rect

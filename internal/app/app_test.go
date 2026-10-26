@@ -1,6 +1,10 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
 	"muxplayer/internal/cover"
@@ -138,5 +142,104 @@ func TestShuffleRepeat(t *testing.T) {
 	m.remove(0)
 	if len(m.list) != 4 {
 		t.Fatal("remove failed")
+	}
+}
+
+// TestWriteFileAtomic checks that saving replaces the playlist in one step and
+// leaves no temp files behind.
+func TestWriteFileAtomic(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "playlist.txt")
+	if err := os.WriteFile(path, []byte("/old/track.mp3"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "/a/1.mp3\n/b/2.mp3"
+	if err := writeFileAtomic(path, []byte(want), 0o644); err != nil {
+		t.Fatalf("writeFileAtomic: %v", err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != want {
+		t.Fatalf("playlist = %q, want %q", got, want)
+	}
+
+	ents, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range ents {
+		if e.Name() != filepath.Base(path) {
+			t.Errorf("leftover temp file: %s", e.Name())
+		}
+	}
+}
+
+// TestSavePlaylistPersistsModel checks the whole path: the model's list is
+// written to the config directory and the dirty flag is cleared.
+func TestSavePlaylistPersistsModel(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("os.UserConfigDir ignores XDG_CONFIG_HOME on macOS")
+	}
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("AppData", dir)
+
+	m := newTestModel()
+	m.dirty = true
+	m.savePlaylist()
+	if m.dirty {
+		t.Fatal("savePlaylist did not clear the dirty flag")
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "muxplayer", "playlist.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(b), "/a/1.mp3\n/a/2.mp3\n/b/3.mp3\n/b/4.mp3\n/c/5.mp3"; got != want {
+		t.Fatalf("playlist = %q, want %q", got, want)
+	}
+}
+
+// TestFlushPlaylistSavesChanges exercises the crash-safety path: a playlist
+// mutation is written on the next tick without any quit or shutdown.
+func TestFlushPlaylistSavesChanges(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("os.UserConfigDir ignores XDG_CONFIG_HOME on macOS")
+	}
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("AppData", dir)
+
+	m := newTestModel()
+	m.add("/a/6.mp3")
+	m.flushPlaylist()
+
+	b, err := os.ReadFile(filepath.Join(dir, "muxplayer", "playlist.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), "/a/6.mp3") {
+		t.Fatalf("playlist does not contain the new track: %q", b)
+	}
+	if m.dirty {
+		t.Fatal("flushPlaylist left the model dirty after a successful save")
+	}
+}
+
+// TestPlaylistMutationsMarkDirty keeps saving independent of shutdown: adding
+// or removing tracks must schedule a write on the next tick.
+func TestPlaylistMutationsMarkDirty(t *testing.T) {
+	m := newTestModel()
+	m.dirty = false
+	m.add("/a/6.mp3")
+	if !m.dirty {
+		t.Fatal("add did not mark the playlist dirty")
+	}
+	m.dirty = false
+	m.remove(0)
+	if !m.dirty {
+		t.Fatal("remove did not mark the playlist dirty")
 	}
 }
