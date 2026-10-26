@@ -40,8 +40,9 @@ are native Go — no cava or other visualizer process is needed.
 | Dependency | Required | Purpose |
 | --- | --- | --- |
 | [mpv](https://mpv.io/) | **Yes** | Audio playback and metadata (JSON IPC) |
-| [ffmpeg](https://ffmpeg.org/) | No | Embedded cover-art extraction (including shared artwork for MPRIS controllers) |
-| A **D-Bus session bus** (Linux/macOS) | No | MPRIS desktop controller integration |
+| [ffmpeg](https://ffmpeg.org/) | **Very Recommended** | Embedded cover-art extraction (including shared artwork for MPRIS controllers) |
+| **D-Bus session bus** (Linux/macOS) | Recommended | MPRIS desktop controller integration |
+| cava | No | No longer required by update 0.6.0 |
 
 The player runs fine without `ffmpeg`; you just lose cover art. The visualizer
 is built in and only needs the operating system's audio output (see
@@ -55,7 +56,7 @@ Other requirements:
 - A terminal of at least **60×18** cells
 - **Go 1.21+** only if you build from source
 
-### Supported audio formats
+### Supported audio formats (provided by mpv)
 
 `.mp3` · `.flac` · `.ogg` · `.opus` · `.wav` · `.m4a` · `.aac` · `.wma` · `.ape`
 
