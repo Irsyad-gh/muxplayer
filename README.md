@@ -1,97 +1,83 @@
 # muxplayer
 
-A fast, dependency-light TUI music player for Linux, macOS, and Windows, built
-with Go and driven by [mpv](https://mpv.io/). You can browse your library, queue
-tracks, and enjoy cover art, an accent colour sampled from the artwork, and a
-live system-audio visualizer all inside the terminal. Capture and FFT analysis
-are native Go — no cava or other visualizer process is needed.
+A terminal music player for Linux, macOS, and Windows, written in Go and driven by [mpv](https://mpv.io/). You browse your library, build a queue, and get cover art, an accent colour pulled from the artwork, and a live system-audio visualizer, all inside the terminal. The audio capture and FFT are plain Go, so you don't need cava or any other visualizer process running alongside it.
 
 ![Version](https://img.shields.io/badge/version-0.7.2-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## **Current release:** `0.7.2`
+Current release: `0.7.2`
 
-# This project is still in development / ! \
-**Please expect some bug and instability and report it to us**
+> **Heads up:** muxplayer is still in development. Expect some bugs and the occasional crash. If you hit one, please [open an issue](https://github.com/Irsyad-gh/muxplayer/issues).
 
-## Features
+## What it does
 
-- **Playlist + file explorer** in a two-tab TUI
-- **mpv playback** through mpv's JSON IPC channel — no shell wrappers
-- **Shuffle modes** — off, shuffle bag (no repeats), or shuffle by folder
-- **Repeat modes** — off, all, one, or repeat N×
-- **Cover art** from embedded tags or folder images, drawn as a true 1:1 square
-- **Adaptive accent colour** sampled from the current cover
-- **Native mirrored visualizer** — a 64-band FFT spectrum at 30 fps, captured straight from system audio (Linux and Windows)
-- **Mouse support** — click, double-click, scroll, and drag to seek
-- **Recursive folder import** and a playlist that persists between runs, saved
-  atomically after every change
-- **Start from the command line** with a folder to browse or an audio file to
-  play right away
-- **Explorer search and filter** — type-ahead recursive search by name or `.ext`
-  with relative-path results, file-type cycling, and A-Z/Z-A sorting
-- **Automatic skip** of tracks that fail to play
-- **MPRIS** — desktop widgets and media keys can see and control playback
-- **Debug mode** — `--debug` mirrors live diagnostics in the original window
-  while the UI runs in a separate terminal window
-- **Small dependency set** — no cgo and no external visualizer; godbus is used for MPRIS and a pure-Go PulseAudio client for Linux audio capture
+- Two tabs: a playlist and a file explorer.
+- Plays through mpv's JSON IPC channel, with no shell wrappers in between.
+- Shuffle can be off, a shuffle bag (every track once before any repeats), or shuffle by folder.
+- Repeat can be off, all, one, or N times.
+- Shows cover art from embedded tags or from a folder image, drawn as a true 1:1 square, and samples an accent colour from it.
+- Draws a mirrored 64-band FFT spectrum at 30 fps, captured straight from system audio (Linux and Windows).
+- Takes mouse input: click, double-click, scroll, and drag to seek.
+- Imports folders recursively. The playlist is saved atomically after every change and comes back on the next run.
+- Starts from the command line with either a folder to browse or an audio file to play right away.
+- Searches the explorer as you type, by name or by `.ext`, with relative-path results, file-type cycling, and A-Z/Z-A sorting.
+- Skips tracks that fail to play.
+- Exposes MPRIS, so desktop widgets and media keys can see and control playback.
+- Has a `--debug` mode that opens the UI in a second terminal window and mirrors live diagnostics in the first.
+- Keeps dependencies small. There is no cgo and no external visualizer. godbus handles MPRIS and a pure-Go PulseAudio client handles Linux capture.
 
 ## Requirements
 
 ### Runtime
 
-| Dependency | Required | Purpose |
+| Dependency | Required | Used for |
 | --- | --- | --- |
-| [mpv](https://mpv.io/) | **Yes** | Audio playback and metadata (JSON IPC) |
-| [ffmpeg](https://ffmpeg.org/) | **Very Recommended** | Embedded cover-art extraction (including shared artwork for MPRIS controllers) |
-| **D-Bus session bus** (Linux/macOS) | Recommended | MPRIS desktop controller integration |
-| cava | No | No longer required by update 0.6.0 |
+| [mpv](https://mpv.io/) | Yes | Audio playback and metadata (JSON IPC) |
+| [ffmpeg](https://ffmpeg.org/) | Strongly recommended | Extracting embedded cover art, including the artwork shared with MPRIS controllers |
+| D-Bus session bus (Linux/macOS) | Recommended | MPRIS desktop controller integration |
+| cava | No | Not needed since 0.6.0 |
 
-The player runs fine without `ffmpeg`; you just lose cover art. The visualizer
-is built in and only needs the operating system's audio output (see
-[Visualizer](#visualizer)).
+muxplayer runs fine without ffmpeg, you just won't get cover art. The visualizer is built in and only needs your operating system's audio output (see [Visualizer](#visualizer)).
 
-Other requirements:
+You'll also need:
 
-- **Linux, macOS, or Windows** (the terminal and mpv-IPC layers are per-OS;
-  everything else is shared, with build tags)
-- A **truecolour-capable terminal** for the best results
-- A terminal of at least **60×18** cells
-- **Go 1.21+** only if you build from source
+- Linux, macOS, or Windows. The terminal and mpv-IPC layers are per-OS, and everything else is shared through build tags.
+- A truecolour terminal, for the best results.
+- A terminal of at least 60×18 cells.
+- Go 1.21 or newer, but only if you build from source.
 
-### Supported audio formats (provided by mpv)
+### Audio formats
 
-`.mp3` · `.flac` · `.ogg` · `.opus` · `.wav` · `.m4a` · `.aac` · `.wma` · `.ape`
+mpv does the decoding, so anything it plays will work. The formats muxplayer lists in the explorer are `.mp3`, `.flac`, `.ogg`, `.opus`, `.wav`, `.m4a`, `.aac`, `.wma`, and `.ape`.
 
 ## Installation
 
-### 1. Install the system dependencies
+### 1. System dependencies
 
-**Arch Linux**
+Arch Linux:
 
 ```sh
 sudo pacman -S mpv ffmpeg go
 ```
 
-**Debian / Ubuntu**
+Debian / Ubuntu:
 
 ```sh
 sudo apt update
 sudo apt install mpv ffmpeg golang-go
 ```
 
-**Fedora**
+Fedora:
 
 ```sh
 sudo dnf install mpv ffmpeg golang
 ```
 
-`ffmpeg` may require RPM Fusion on Fedora. Install only `mpv` if you want the
-smallest setup, then add the optional tools later.
+On Fedora, ffmpeg may need RPM Fusion. If you want the smallest possible setup, install only mpv and add the rest later.
 
-**macOS**
+macOS:
 
 ```sh
 brew install mpv ffmpeg
@@ -99,7 +85,7 @@ brew install mpv ffmpeg
 # visualizer is unavailable there. Playback and cover art work normally.
 ```
 
-**Windows**
+Windows:
 
 ```powershell
 winget install shinchiro.mpv
@@ -107,11 +93,9 @@ winget install Gyan.FFmpeg
 # or use scoop
 ```
 
-On Windows, run muxplayer inside **Windows Terminal** (or any VT-enabled
-console). The visualizer uses WASAPI loopback on the default output device, so
-it follows whatever mpv is playing without any extra setup.
+On Windows, run muxplayer inside Windows Terminal (or any console with VT support). The visualizer uses WASAPI loopback on the default output device, so it follows whatever mpv is playing without extra setup.
 
-### 2. Build and install muxplayer
+### 2. Build muxplayer
 
 ```sh
 git clone https://github.com/Irsyad-gh/muxplayer.git
@@ -119,7 +103,7 @@ cd muxplayer
 go build -o muxplayer .
 ```
 
-Install it somewhere on your `PATH`:
+Then put the binary somewhere on your `PATH`:
 
 ```sh
 # System-wide
@@ -129,21 +113,19 @@ sudo install -Dm755 muxplayer /usr/local/bin/muxplayer
 install -Dm755 muxplayer ~/.local/bin/muxplayer
 ```
 
-Alternatively, let Go install it into its binary directory (make sure
-`$(go env GOPATH)/bin` is on your `PATH`):
+Or let Go install it into its own binary directory (make sure `$(go env GOPATH)/bin` is on your `PATH`):
 
 ```sh
 go install .
 ```
 
-### 3. Verify
+### 3. Check that it works
 
 ```sh
 muxplayer --version # or muxplayer -v
 ```
 
-`--version` prints the version and exits immediately, it does not start mpv or
-open the TUI.
+This prints the version and exits. It doesn't start mpv or open the TUI.
 
 ## Usage
 
@@ -154,18 +136,16 @@ muxplayer --help                    # or -h
 muxplayer --version                 # or -v
 ```
 
-| Command | Description |
+| Command | What it does |
 | --- | --- |
-| `muxplayer` | Start in `~/Music` if it exists, otherwise `$HOME` |
-| `muxplayer ~/Music` | Start the explorer in a specific directory |
-| `muxplayer ~/Music/song.mp3` | Open the track's folder, add it to the playlist, and start playing |
-| `muxplayer --debug` | Open the UI in a new terminal window and stream its diagnostics in the original one |
-| `muxplayer --help` | Print usage and exit (`-h` also works) |
-| `muxplayer --version` | Print the version and exit (`-v` also works) |
-| `muxplayer --debug` | The origin terminal show debug mode, while the interface is in new window (`-d` also works) |
+| `muxplayer` | Starts in `~/Music` if it exists, otherwise `$HOME` |
+| `muxplayer ~/Music` | Starts the explorer in that directory |
+| `muxplayer ~/Music/song.mp3` | Opens the track's folder, adds the track to the playlist, and plays it |
+| `muxplayer --debug` (or `-d`) | Opens the UI in a new terminal window and streams diagnostics in the original one |
+| `muxplayer --help` (or `-h`) | Prints usage and exits |
+| `muxplayer --version` (or `-v`) | Prints the version and exits |
 
-The saved playlist is loaded on startup; if it is empty, muxplayer opens on the
-**Explorer** tab.
+The saved playlist loads on startup. If it's empty, muxplayer opens on the Explorer tab.
 
 ### Debug mode
 
@@ -173,25 +153,15 @@ The saved playlist is loaded on startup; if it is empty, muxplayer opens on the
 muxplayer --debug ~/Music
 ```
 
-Debug mode launches the player UI in a **new terminal window** and keeps the
-current window as a live console. Every diagnostic line written by the player
-window, terminal size changes, key and mouse input, mpv commands and events,
-cover-art extraction, audio capture, MPRIS, and shutdown, is mirrored there as it
-happens. Close the player window or press `Ctrl-C` in the console to stop both.
+Debug mode launches the player UI in a new terminal window and keeps your current window as a live console. Everything the player window logs shows up there as it happens: terminal size changes, key and mouse input, mpv commands and events, cover-art extraction, audio capture, MPRIS, and shutdown. Close the player window or press `Ctrl-C` in the console to stop both.
 
-muxplayer picks an installed terminal emulator automatically (`$TERMINAL`,
-`x-terminal-emulator`, GNOME Terminal, Konsole, kitty, alacritty, foot, WezTerm,
-xterm, and others). Inside tmux without a graphical display it opens a new tmux
-window instead. To force a particular terminal, set `MUXPLAYER_TERMINAL` to its
-executable name or path:
+muxplayer picks an installed terminal emulator on its own. It checks `$TERMINAL`, `x-terminal-emulator`, GNOME Terminal, Konsole, kitty, alacritty, foot, WezTerm, xterm, and a few others. Inside tmux with no graphical display, it opens a new tmux window instead. To force a specific terminal, set `MUXPLAYER_TERMINAL` to its executable name or path:
 
 ```sh
 MUXPLAYER_TERMINAL=kitty muxplayer --debug
 ```
 
-The hidden `--debug-child` flag is used internally by the launcher; run it only
-if you want to start a player whose diagnostics go to the current terminal's
-stderr.
+There's also a hidden `--debug-child` flag that the launcher uses internally. You only need it if you want a player whose diagnostics go to the current terminal's stderr.
 
 ## Key bindings
 
@@ -199,12 +169,12 @@ stderr.
 
 | Key | Action |
 | --- | --- |
-| `Tab` | Switch between **Playlist** and **Explorer** |
-| `↑` / `↓`, `k` / `j` | Move selection |
+| `Tab` | Switch between Playlist and Explorer |
+| `↑` / `↓`, `k` / `j` | Move the selection |
 | `PgUp` / `PgDn` | Move 10 rows |
 | `Home` / `g` | Jump to the top |
 | `End` / `G` | Jump to the bottom |
-| `Enter` | Play selection; in Explorer, open a folder or add-and-play a file |
+| `Enter` | Play the selection. In Explorer, opens a folder or adds a file and plays it |
 | `Backspace` | Go to the parent directory (Explorer) |
 | `q`, `Ctrl-C` | Save the playlist and quit |
 
@@ -212,9 +182,9 @@ stderr.
 
 | Key | Action |
 | --- | --- |
-| `Space` | Pause/resume; starts the selection when idle |
+| `Space` | Pause or resume. Starts the selection if nothing is playing |
 | `n` | Next track |
-| `p` | Previous track (restarts the current track if it is past 3 s) |
+| `p` | Previous track (restarts the current one if you're past 3 s) |
 | `←` / `→` | Seek −5 s / +5 s |
 | `+` / `=` | Volume +5% |
 | `-` / `_` | Volume −5% |
@@ -223,63 +193,52 @@ stderr.
 
 | Key | Action |
 | --- | --- |
-| `a` | Add the selected file or folder (recursively) to the playlist — Explorer only |
-| `d` | Remove the selected track from the playlist — Playlist only |
+| `a` | Add the selected file or folder (recursively) to the playlist. Explorer only |
+| `d` | Remove the selected track from the playlist. Playlist only |
 
 ### Explorer search and filter
 
-The Explorer has a search bar above the file list. Press `/` to focus it and
-type directly; the listing updates as you type. Searches are
-**case-insensitive** and scan the folder you are currently browsing **and its
-subdirectories**. Nested matches are shown with paths relative to that folder,
-such as `albums/live.mp3`. The search, type filter, and sort order stay active
-as you navigate.
+The search bar sits above the file list. Press `/` to focus it and start typing; the listing updates as you go. Searches ignore case and cover the folder you're in plus everything beneath it. Matches from subfolders are shown with paths relative to the current folder, like `albums/live.mp3`. Your query, type filter, and sort order stay in place while you navigate.
 
 | Key | Action |
 | --- | --- |
 | `/` | Focus the search bar |
-| typing | Match names anywhere; a term starting with `.` matches that file type |
+| typing | Match names anywhere. A term starting with `.` matches that file type |
 | `Backspace` | Delete the last character |
 | `Ctrl-U` | Clear the query |
-| `Enter` | Keep the results and return to the list |
-| `Esc` | Clear the filter and return to the listing |
-| `t` | Cycle the type filter: any, then each file type under this folder |
-| `o` | Toggle result order A-Z / Z-A |
+| `Enter` | Keep the results and go back to the list |
+| `Esc` | Clear the filter and go back to the normal listing |
+| `t` | Cycle the type filter: any, then each file type found under this folder |
+| `o` | Toggle result order, A-Z or Z-A |
 
-Examples: `live` matches any file or folder whose name contains "live",
-including matches from subfolders; `.flac` shows FLAC files from the whole tree;
-`live .flac` combines both. Extension-only searches list files only. Hidden
-files and folders are skipped. Folders that match a name are listed first so
-you can descend into them; press `Esc` to clear the query and return to normal
-browsing.
+Some examples. `live` matches any file or folder with "live" in its name, including ones in subfolders. `.flac` shows FLAC files from the whole tree. `live .flac` combines the two. An extension-only search lists files only. Hidden files and folders are skipped. Folders that match by name come first so you can step into them, and `Esc` takes you back to normal browsing.
 
-Click the search bar to focus it, and click the `t:…` or `o:…` chips to change
-the type filter or sort order with the mouse.
+With the mouse, click the search bar to focus it, or click the `t:…` and `o:…` chips to change the type filter or sort order.
 
 ### Modes
 
 | Key | Action |
 | --- | --- |
-| `s` | Cycle shuffle: **off → bag → folder** |
-| `r` | Cycle repeat: **off → all → one → N×** |
-| `[` / `]` | Decrease/increase the N× repeat count (2–99) |
+| `s` | Cycle shuffle: off, bag, folder |
+| `r` | Cycle repeat: off, all, one, N× |
+| `[` / `]` | Lower or raise the N× repeat count (2 to 99) |
 
-**Shuffle modes**
-
-| Mode | Behaviour |
-| --- | --- |
-| `off` | Play in playlist order |
-| `bag` | Shuffle into a bag and play every track once before reshuffling |
-| `folder` | Shuffle folder order while keeping tracks inside each folder together |
-
-**Repeat modes**
+Shuffle modes:
 
 | Mode | Behaviour |
 | --- | --- |
-| `off` | Stop when the queue ends |
-| `all` | Loop the queue |
-| `one` | Repeat the current track |
-| `N×` | Repeat the current track N times, then advance |
+| `off` | Plays in playlist order |
+| `bag` | Shuffles everything into a bag and plays every track once before reshuffling |
+| `folder` | Shuffles the order of folders but keeps the tracks inside each folder together |
+
+Repeat modes:
+
+| Mode | Behaviour |
+| --- | --- |
+| `off` | Stops when the queue ends |
+| `all` | Loops the queue |
+| `one` | Repeats the current track |
+| `N×` | Repeats the current track N times, then moves on |
 
 ### Mouse
 
@@ -291,95 +250,63 @@ the type filter or sort order with the mouse.
 | Click the search bar | Focus the search box (Explorer) |
 | Click `t:…` / `o:…` | Cycle the file-type filter / name order (Explorer) |
 | Wheel over the list | Scroll three rows |
-| Wheel over the right panel | Adjust volume |
-| Click/drag the progress bar | Seek |
+| Wheel over the right panel | Change the volume |
+| Click or drag the progress bar | Seek |
 | Click the buttons | Repeat, previous, pause/play, next, shuffle |
 
 ## Cover art
 
-muxplayer first asks `ffmpeg` to extract artwork embedded in the audio file. If
-that fails, it looks for a folder image next to the track:
+muxplayer first asks ffmpeg to pull out any artwork embedded in the audio file. If that fails, it looks for an image next to the track:
 
 ```text
 cover.jpg  folder.jpg  cover.png  folder.png  front.jpg
 ```
 
-Artwork is centre-cropped to a square and drawn with truecolour half-blocks as
-a true **1:1 square**. muxplayer reads your terminal's cell pixel size to do
-this: a cell is usually twice as tall as it is wide, and the artwork is
-pre-scaled by the inverse of that ratio so it never looks stretched. The
-cover's average colour becomes the interface accent; tracks without art get a
-deterministic colour derived from their path.
+The artwork is cropped to a square from the centre and drawn with truecolour half-blocks. To keep it from looking stretched, muxplayer reads your terminal's cell pixel size. A cell is usually twice as tall as it is wide, so the image is pre-scaled by the inverse of that ratio. The cover's average colour becomes the interface accent. Tracks with no art get a colour derived deterministically from their path.
 
 ## Desktop integration (MPRIS)
 
-On Linux and macOS, muxplayer registers itself on the D-Bus session bus as
-`org.mpris.MediaPlayer2.muxplayer` (or an instance-suffixed variant when
-another instance owns the name). Desktop media suites — bar widgets, media-key
-daemons, phone-link bridges — then show muxplayer's title, artist, artwork, and
-position, and can **play/pause, stop, skip, seek, set volume, and quit** the
-player.
+On Linux and macOS, muxplayer registers on the D-Bus session bus as `org.mpris.MediaPlayer2.muxplayer`. If another instance already owns that name, it uses an instance-suffixed variant. Bar widgets, media-key daemons, phone-link bridges, and similar tools can then show muxplayer's title, artist, artwork, and position, and can play/pause, stop, skip, seek, set the volume, and quit the player.
 
-media suites — bar widgets, media-key daemons, phone-link bridges — which then
-show the current title, artist, and artwork and can play/pause, stop, skip,
-seek, set the volume, and quit the player. Without a session bus (headless
-sessions, Windows), playback is untouched. Exported artwork for controllers is
-extracted to `~/.cache/muxplayer/art`.
-
+Without a session bus (headless sessions, Windows), playback itself is unaffected. Artwork exported for controllers is extracted to `~/.cache/muxplayer/art`.
 
 ## Visualizer
 
-muxplayer captures system audio itself and renders a mirrored 64-band spectrum
-under the playlist. Low frequencies sit in the middle and high frequencies at
-the edges, so the visualization stays balanced on both sides. There is no cava
-process and no generated cava config: the capture readers and FFT analyser are
-part of the Go binary.
+muxplayer captures system audio itself and draws a mirrored 64-band spectrum under the playlist, with low frequencies in the middle and high frequencies at the edges so both sides stay balanced. The capture readers and the FFT analyser are part of the Go binary. There's no cava process and no generated cava config.
 
-- **Linux:** talks to PulseAudio over its native protocol. PipeWire works
-  through its PulseAudio compatibility server (`pipewire-pulse`). The monitor
-  source of the default output sink is captured.
-- **Windows:** uses WASAPI loopback on the default output device, so no extra
-  setup is required.
-- **macOS:** native system-audio capture is not implemented yet. Playback works
-  normally, but the visualizer shows a short notice. macOS does not expose the
-  output mix to ordinary applications without a CoreAudio process tap or a
-  loopback device.
+- **Linux:** talks to PulseAudio over its native protocol. PipeWire works through its PulseAudio compatibility server (`pipewire-pulse`). muxplayer captures the monitor source of the default output sink.
+- **Windows:** uses WASAPI loopback on the default output device, so there's nothing to set up.
+- **macOS:** native capture isn't implemented yet. Playback works, but the visualizer only shows a short notice. macOS doesn't give ordinary applications access to the output mix unless you use a CoreAudio process tap or a loopback device.
 
-The visualizer is optional: if no audio server or output device is available,
-muxplayer still starts normally.
+The visualizer is optional. If no audio server or output device is available, muxplayer still starts normally.
 
-If Linux captures the wrong output, list your sinks and choose one by name:
+If Linux captures the wrong output, list your sinks and pick one by name:
 
 ```sh
 pactl list short sinks
 MUXPLAYER_AUDIO_SINK=alsa_output.pci-0000_03_00.6.HiFi__Speaker__sink muxplayer ~/Music
 ```
 
-The PulseAudio client also honours `PULSE_SERVER` if your server is not at the
-default location.
+The PulseAudio client also respects `PULSE_SERVER` if your server isn't in the default location.
 
 ## Configuration and files
 
-muxplayer has no config file — just a few files generated at runtime:
+There's no config file. muxplayer only creates a few files at runtime:
 
 | Path | Contents |
 | --- | --- |
 | `$XDG_CONFIG_HOME/muxplayer/playlist.txt` | Saved playlist (defaults to `~/.config/muxplayer/playlist.txt`) |
 | `$XDG_CACHE_HOME/muxplayer/art/` | Artwork extracted for MPRIS controllers |
-| temp dir `muxplayer-<pid>.sock` (Unix) / `\\.\pipe\muxplayer-<pid>` (Windows) | mpv JSON IPC endpoint |
+| `muxplayer-<pid>.sock` in the temp dir (Unix), `\\.\pipe\muxplayer-<pid>` (Windows) | mpv JSON IPC endpoint |
 
-Only tracks that still exist are restored from the saved playlist. The playlist
-is written shortly after every change, so a crash, `SIGKILL`, or a power cut
-cannot lose it. Each save goes to a temporary file that is atomically renamed
-over the old one, which means an interrupted save leaves the previous playlist
-intact instead of a truncated file.
+When the playlist is restored, only tracks that still exist are kept. It's written shortly after every change, so a crash, a `SIGKILL`, or a power cut won't lose it. Each save goes to a temporary file that is then atomically renamed over the old one, so an interrupted save leaves the previous playlist intact rather than a truncated file.
 
 | Environment variable | Description |
 | --- | --- |
-| `MUXPLAYER_AUDIO_SINK` | PulseAudio/PipeWire sink name to visualize; empty uses the default output (Linux) |
+| `MUXPLAYER_AUDIO_SINK` | PulseAudio/PipeWire sink name to visualize. Empty means the default output (Linux) |
 | `MUXPLAYER_CELL_ASPECT` | Cell height ÷ cell width, overriding terminal detection for the square cover (default `2`; try `1` on square-cell terminals) |
 | `MUXPLAYER_TERMINAL` | Terminal emulator used by `--debug` on Linux/macOS (executable name or path) |
-| `MUXPLAYER_DEBUG` | Print debug diagnostics to stderr without opening a second window |
+| `MUXPLAYER_DEBUG` | Prints debug diagnostics to stderr without opening a second window |
 
 ## Building and testing
 
@@ -402,14 +329,9 @@ GOOS=darwin  GOARCH=arm64 go build -o muxplayer-mac .
 GOOS=windows GOARCH=amd64 go build -o muxplayer.exe .
 ```
 
-The Go code uses two small third-party modules: [godbus/dbus](https://github.com/godbus/dbus)
-for MPRIS and [jfreymuth/pulse](https://github.com/jfreymuth/pulse), a pure-Go
-PulseAudio client used by the Linux capture backend. Neither requires cgo, and
-the visualizer does not launch an external program. Platform-specific files sit
-next to the package they serve (see [Project layout](#project-layout)) and are
-selected with build tags.
+The code uses two small third-party modules: [godbus/dbus](https://github.com/godbus/dbus) for MPRIS, and [jfreymuth/pulse](https://github.com/jfreymuth/pulse), a pure-Go PulseAudio client used by the Linux capture backend. Neither needs cgo, and the visualizer never launches an external program. Platform-specific files sit next to the package they belong to (see [Project layout](#project-layout)) and are selected with build tags.
 
-Override the reported version at build time:
+You can override the reported version at build time:
 
 ```sh
 go build -ldflags "-X main.version=0.1.0" -o muxplayer .
@@ -431,96 +353,76 @@ internal/
 └── term/               raw mode, terminal size, signals
 ```
 
-The audio and visualizer packages are intentionally independent of the TUI and
-of each other's internals. `audiocap` exposes a pull-based `Source` of
-interleaved float32 samples; `visualizer` turns any `Source` into bar frames.
-A new capture backend only needs to implement `Source` in a file with the right
-build tag, and a new consumer can reuse `visualizer.Analyzer` without opening
-system audio at all.
+The audio and visualizer packages are deliberately independent of the TUI and of each other's internals. `audiocap` exposes a pull-based `Source` of interleaved float32 samples, and `visualizer` turns any `Source` into bar frames. To add a capture backend, implement `Source` in a file with the right build tag. A new consumer can reuse `visualizer.Analyzer` without opening system audio at all.
 
-Platform code lives beside what it serves: `term/raw_unix.go`,
-`term/raw_windows.go`, `term/signals_*`, `term/termios_*`, `mpv/ipc_*`,
-`audiocap/capture_*`, and `mpris/server_*`.
+Platform code lives beside what it serves: `term/raw_unix.go`, `term/raw_windows.go`, `term/signals_*`, `term/termios_*`, `mpv/ipc_*`, `audiocap/capture_*`, and `mpris/server_*`.
 
 ## FAQ
 
-1. **failed to start mpv (is it installed?)**
-Install `mpv` and make sure it is on your `PATH`:
+**failed to start mpv (is it installed?)**
+
+Install mpv and make sure it's on your `PATH`:
 
 ```sh
 mpv --version
 ```
 
-2. **Visulizer off ?**
-The built-in visualizer could not open system audio. On Linux, make sure
-PulseAudio or PipeWire's PulseAudio server is running (`pactl info`), and
-optionally pick a sink with `MUXPLAYER_AUDIO_SINK`. On Windows, check that the
-default output device is available. On macOS, native system-audio capture is
-not implemented yet. Run with `MUXPLAYER_DEBUG=1` to see the exact capture
-error.
+**The visualizer is off.**
 
-3. **No cover art**
-Install `ffmpeg` for embedded artwork, or place one of the folder images listed
-above next to the track. Some files simply contain no artwork.
+The built-in visualizer couldn't open system audio. On Linux, check that PulseAudio, or PipeWire's PulseAudio server, is running (`pactl info`). You can also pick a sink with `MUXPLAYER_AUDIO_SINK`. On Windows, check that the default output device is available. On macOS, capture isn't implemented yet. Run with `MUXPLAYER_DEBUG=1` to see the exact capture error.
 
-4. **Cover looks stretched (not square)**
-muxplayer normally detects your terminal's cell pixel size automatically. On
-terminals that do not report it, set the ratio by hand — for example
-`MUXPLAYER_CELL_ASPECT=1` for square cells or the usual `2` for 1:2 cells.
+**There's no cover art.**
 
-5. **Visualizer is flat or reacts to the wrong output**
-On Linux, check `pactl get-default-sink` and `pactl list short sinks`, then set
-`MUXPLAYER_AUDIO_SINK` to the sink where mpv is playing. On Windows, the
-visualizer follows the default output device, so make sure mpv uses that same
-device.
+Install ffmpeg for embedded artwork, or put one of the folder images listed above next to the track. Some files just don't contain any artwork.
 
-6. **`terminal too small (min 60x18)`**
-Enlarge the terminal window.
+**The cover looks stretched.**
 
-7. **`--debug` does not open a window**
-muxplayer could not find a terminal emulator. Set one explicitly, for example
-`MUXPLAYER_TERMINAL=kitty muxplayer --debug`, or run inside tmux (which opens a
-new tmux window instead).
+muxplayer normally detects your terminal's cell pixel size. Some terminals don't report it, and in that case you can set the ratio yourself: `MUXPLAYER_CELL_ASPECT=1` for square cells, or `2` for the usual 1:2 cells.
 
-8. **Colours look wrong**
-Use a terminal with truecolour support and a font that includes block and
-box-drawing glyphs.
+**The visualizer is flat, or reacts to the wrong output.**
 
-9. **No sound**
-Check that mpv itself can play the file:
+On Linux, compare `pactl get-default-sink` with `pactl list short sinks`, then set `MUXPLAYER_AUDIO_SINK` to the sink mpv is playing to. On Windows, the visualizer follows the default output device, so make sure mpv is using that same device.
+
+**"terminal too small (min 60x18)"**
+
+Make the terminal window bigger.
+
+**`--debug` doesn't open a window.**
+
+muxplayer couldn't find a terminal emulator. Set one explicitly, for example `MUXPLAYER_TERMINAL=kitty muxplayer --debug`, or run inside tmux, which opens a new tmux window instead.
+
+**The colours look wrong.**
+
+Use a terminal with truecolour support and a font that has block and box-drawing glyphs.
+
+**There's no sound.**
+
+Check that mpv can play the file on its own:
 
 ```sh
 mpv /path/to/track.mp3
 ```
 
-10. **Playlist did not persist**
-Playlist changes are saved atomically within a fraction of a second, so even a
-crash or `SIGKILL` keeps them. If the file still looks stale, check that
-`$XDG_CONFIG_HOME/muxplayer` is writable and run with `MUXPLAYER_DEBUG=1` to see
-the exact save error.
+**The playlist didn't persist.**
 
-## For Future Development 
+Changes are saved within a fraction of a second, so even a crash or `SIGKILL` should keep them. If the file still looks stale, check that `$XDG_CONFIG_HOME/muxplayer` is writable, and run with `MUXPLAYER_DEBUG=1` to see the exact save error.
 
-- Native dependencies and without relying on mpv and ffmpeg
+## Planned
+
+- Native dependencies, without relying on mpv and ffmpeg
 - macOS CoreAudio process-tap capture for the visualizer
 - Support for other Windows terminals
-- Visualizer only on less than 60x18 window
+- A visualizer-only view for windows smaller than 60×18
 - More customization
 
 ## Contributing
 
-Issues and pull requests are welcome at
-[github.com/Irsyad-gh/muxplayer](https://github.com/Irsyad-gh/muxplayer).
-Please run `gofmt`, `go vet -stdmethods=false`, and `go test ./...` before
-submitting a change.
+Issues and pull requests are welcome at [github.com/Irsyad-gh/muxplayer](https://github.com/Irsyad-gh/muxplayer). Before sending a change, please run `gofmt`, `go vet -stdmethods=false`, and `go test ./...`.
 
-> Why `-stdmethods=false`? The MPRIS interface must export a method literally
-> named `Seek` taking microseconds (`Seek(int64)`). That conflicts with Go's
-> `io.Seeker` naming convention, which vet's `stdmethods` check flags as a
-> false positive. Every other vet check stays enabled.
+About `-stdmethods=false`: the MPRIS interface has to export a method literally named `Seek` that takes microseconds (`Seek(int64)`). Go's `io.Seeker` convention uses the same name, so vet's `stdmethods` check flags it as a false positive. Every other vet check stays on.
 
 ## License
 
 [MIT](LICENSE) © 2026 Irsyad Dzaky Nurghany
 
-yes, this project is built using AI helper tools
+Yes, this project was built with the help of AI tools.
