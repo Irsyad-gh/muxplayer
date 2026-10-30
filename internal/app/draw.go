@@ -1,8 +1,9 @@
 package app
 
+// note: cover aspect fudging is more art than math
+
 import (
 	"fmt"
-	"math"
 	"strings"
 	"unicode/utf8"
 
@@ -165,11 +166,11 @@ func (m *model) drawSearch(s *screen, box layout, acc, onAcc int32) {
 	if !m.searching && m.filterActive() {
 		text += fmt.Sprintf(" (%d)", max(0, len(m.view)-1))
 	}
+	bg := def
 	if m.searching {
-		s.text(box.lx, 2, trunc(text, leftW), fg, acc, at, leftW)
-	} else {
-		s.text(box.lx, 2, trunc(text, leftW), fg, def, at, leftW)
+		bg = acc
 	}
+	s.text(box.lx, 2, trunc(text, leftW), fg, bg, at, leftW)
 	m.hSearch = rect{box.lx, 2, leftW, 1}
 
 	x := box.lx + box.lw - orderW - typeW - 2
@@ -261,7 +262,7 @@ func (m *model) drawBars(s *screen, box layout, acc int32) {
 	for b := 0; b < slots; b++ {
 		lo, hi := mirrorBands(b, slots, len(m.bars))
 		v := barsMax(m.bars, lo, hi)
-		eighths := int(math.Min(1, v) * float64(box.vh*8))
+		eighths := int(min(1, v) * float64(box.vh*8))
 		col := cover.Pack(cover.Mix(m.accent, cover.RGB{255, 255, 255}, v*.45))
 		m.drawBar(s, box, offset+b*barWidth, eighths, col)
 	}
@@ -298,7 +299,7 @@ func mirrorBands(slot, slots, bands int) (lo, hi int) {
 func barsMax(bars []float64, lo, hi int) float64 {
 	v := 0.0
 	for k := lo; k < max(hi, lo+1) && k < len(bars); k++ {
-		v = math.Max(v, bars[k])
+		v = max(v, bars[k])
 	}
 	return v
 }
@@ -350,7 +351,7 @@ func (m *model) drawProgress(s *screen, box layout, acc int32, y int) {
 	m.hBar = rect{box.rx, y, box.rw, 1}
 	pos := 0
 	if m.dur > 0 {
-		pos = int(math.Min(1, m.tpos/m.dur) * float64(box.rw-1))
+		pos = int(min(1, m.tpos/m.dur) * float64(box.rw-1))
 	}
 	for i := 0; i < box.rw; i++ {
 		ch, col, at := "━", def, aDim

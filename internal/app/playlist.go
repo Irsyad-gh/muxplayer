@@ -1,19 +1,29 @@
 package app
 
+// note: walk errors are ignored on purpose; add whatever we can read
+
 import (
-	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"muxplayer/internal/cover"
 	"muxplayer/internal/diag"
 )
 
-// rebuild rearranges the play order for the current shuffle mode.
+// rebuild reshuffles the play order for the current mode and points pos back
+// at the current track.
 func (m *model) rebuild() {
-	m.order = m.buildOrder()
+	ord := inOrder(len(m.list))
+	switch m.shuffle {
+	case shuffleBag:
+		rand.Shuffle(len(ord), func(i, j int) { ord[i], ord[j] = ord[j], ord[i] })
+	case shuffleFolder:
+		ord = folderOrder(m.list)
+	}
+	m.order = ord
 	m.pos = 0
 	for i, v := range m.order {
 		if v != m.cur {
@@ -28,18 +38,8 @@ func (m *model) rebuild() {
 	}
 }
 
-func (m *model) buildOrder() []int {
-	ord := identity(len(m.list))
-	switch m.shuffle {
-	case shuffleBag:
-		rand.Shuffle(len(ord), func(i, j int) { ord[i], ord[j] = ord[j], ord[i] })
-	case shuffleFolder:
-		ord = folderOrder(m.list)
-	}
-	return ord
-}
-
-func identity(n int) []int {
+// inOrder is 0..n-1, i.e. every track in added order.
+func inOrder(n int) []int {
 	ord := make([]int, n)
 	for i := range ord {
 		ord[i] = i
@@ -64,12 +64,6 @@ func folderOrder(list []string) []int {
 		ord = append(ord, groups[d]...)
 	}
 	return ord
-}
-
-func (m *model) findPos(idx int) {
-	if i := indexOf(m.order, idx); i >= 0 {
-		m.pos = i
-	}
 }
 
 func (m *model) play(idx int) {
@@ -101,7 +95,9 @@ func (m *model) playAt(idx int) {
 	}
 	diag.Debugf("player: track %d/%d %s", idx+1, len(m.list), m.list[idx])
 	m.cur, m.played, m.tpos, m.meta = idx, 1, 0, nil
-	m.findPos(idx)
+	if i := slices.Index(m.order, idx); i >= 0 {
+		m.pos = i
+	}
 	m.mp.Do("loadfile", m.list[idx], "replace")
 	m.mp.Do("set_property", "pause", false)
 	m.target = cover.Lift(cover.Hash(m.list[idx]))
@@ -167,7 +163,7 @@ func (m *model) wrapNext(delta, next, n int) int {
 /* ───────────── playlist & browser ───────────── */
 
 func (m *model) add(p string) int {
-	if i := indexOfString(m.list, p); i >= 0 {
+	if i := slices.Index(m.list, p); i >= 0 {
 		return i
 	}
 	m.list = append(m.list, p)
@@ -185,7 +181,7 @@ func (m *model) addDir(dir string) int {
 		}
 		return nil
 	}
-	_ = filepath.WalkDir(dir, walk)
+	filepath.WalkDir(dir, walk) // ignore error, add what we can
 	diag.Debugf("playlist: added %d track(s) from %s", n, dir)
 	return n
 }
@@ -214,7 +210,10 @@ func (m *model) load(dir string) {
 	m.view = nil // old row indexes must not be applied to the new listing
 
 	listing := []entry{{name: "..", dir: true}}
-	es, _ := os.ReadDir(dir)
+	es, err := os.ReadDir(dir)
+	if err != nil {
+		diag.Debugf("explorer: can't read %s: %v", dir, err)
+	}
 	var dirs, files []entry
 	for _, e := range es {
 		name := e.Name()
@@ -315,5 +314,5 @@ func (m *model) activate() {
 
 func (m *model) seekFrac(x int) {
 	frac := float64(x-m.hBar.x) / float64(max(1, m.hBar.w-1))
-	m.mp.Do("seek", math.Max(0, math.Min(1, frac))*m.dur, "absolute")
+	m.mp.Do("seek", min(1, max(0, frac))*m.dur, "absolute")
 }

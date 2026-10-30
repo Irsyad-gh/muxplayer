@@ -1,5 +1,7 @@
 package mpris
 
+// note: these tests don't need a real session bus, which is the whole point
+
 import (
 	"reflect"
 	"testing"

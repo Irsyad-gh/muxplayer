@@ -2,6 +2,8 @@
 
 package term
 
+// note: console mode flags are mostly cargo-culted from other Go terminal libs
+
 import (
 	"fmt"
 	"syscall"
@@ -51,7 +53,7 @@ func consoleMode(handle uintptr) uint32 {
 }
 
 func setConsoleMode(handle uintptr, mode uint32) {
-	_, _, _ = procSetConsoleMode.Call(handle, uintptr(mode))
+	procSetConsoleMode.Call(handle, uintptr(mode)) // ignore error, best effort
 }
 
 // Raw enables VT sequences and disables line/echo input. The returned

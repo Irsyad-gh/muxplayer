@@ -2,6 +2,8 @@
 // IPC socket and draws a spectrum from natively captured system audio.
 package main
 
+// note: the arg parsing is deliberately dumb; flags before the path is all we need
+
 import (
 	"fmt"
 	"os"
@@ -49,7 +51,7 @@ func run() (code int) {
 	}
 	player, err := mpv.Start()
 	if err != nil {
-		diag.Errf("failed to start mpv (is it installed?): %v", err)
+		diag.Errf("mpv won't start (installed?): %v", err)
 		return 1
 	}
 	dir, track := startTarget(opts.path)
@@ -139,7 +141,7 @@ func startTarget(arg string) (dir, track string) {
 	}
 	abs, err := filepath.Abs(arg)
 	if err != nil {
-		diag.Warnf("ignoring %q: %v", arg, err)
+		diag.Warnf("ignore %q: %v", arg, err)
 		return dir, ""
 	}
 	switch {
@@ -147,19 +149,22 @@ func startTarget(arg string) (dir, track string) {
 		return abs, ""
 	case isFile(abs):
 		if !cover.IsAudio(abs) {
-			diag.Warnf("not a supported audio file: %s", abs)
+			diag.Warnf("not audio: %s", abs)
 			return dir, ""
 		}
 		return filepath.Dir(abs), abs
 	default:
-		diag.Warnf("no such file or directory: %s", abs)
+		diag.Warnf("no such path: %s", abs)
 		return dir, ""
 	}
 }
 
 // defaultDir prefers ~/Music when it exists, else the home directory.
 func defaultDir() string {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "."
+	}
 	if music := filepath.Join(home, "Music"); isDir(music) {
 		return music
 	}

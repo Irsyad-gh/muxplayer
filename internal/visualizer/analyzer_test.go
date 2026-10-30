@@ -1,5 +1,7 @@
 package visualizer
 
+// note: these tests assert loose ranges because the window and smoothing blur exact values
+
 import (
 	"math"
 	"testing"

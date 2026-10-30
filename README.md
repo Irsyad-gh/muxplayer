@@ -11,7 +11,7 @@ are native Go — no cava or other visualizer process is needed.
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Current release:** `0.7.2`
+## **Current release:** `0.7.2`
 
 # This project is still in development / ! \
 **Please expect some bug and instability and report it to us**

@@ -2,6 +2,8 @@
 
 package debugmode
 
+// note: terminal detection is guesswork; there is no standard way to ask
+
 import (
 	"errors"
 	"fmt"
@@ -42,7 +44,7 @@ func writeLauncher(dir, self string, args []string, logPath, statusPath, pidPath
 	fmt.Fprintf(&b, "mv %s %s\n", shQuote(statusPath+".tmp"), shQuote(statusPath))
 
 	if err := os.WriteFile(path, []byte(b.String()), 0o700); err != nil {
-		return "", fmt.Errorf("cannot write debug launcher: %w", err)
+		return "", fmt.Errorf("write debug launcher: %w", err)
 	}
 	return path, nil
 }
@@ -53,7 +55,7 @@ func launchTerminal(script string) (*exec.Cmd, error) {
 	if name := os.Getenv("MUXPLAYER_TERMINAL"); name != "" {
 		path, err := exec.LookPath(name)
 		if err != nil {
-			return nil, fmt.Errorf("MUXPLAYER_TERMINAL %q not found: %w", name, err)
+			return nil, fmt.Errorf("terminal %q not found: %w", name, err)
 		}
 		return terminalCommand(path, specArgs(filepath.Base(path)), script), nil
 	}
@@ -82,7 +84,7 @@ func launchTerminal(script string) (*exec.Cmd, error) {
 	if cmd := tmuxCommand(script); cmd != nil {
 		return cmd, nil
 	}
-	return nil, errors.New("no terminal emulator found; set MUXPLAYER_TERMINAL (for example MUXPLAYER_TERMINAL=kitty)")
+	return nil, errors.New("no terminal found; set MUXPLAYER_TERMINAL (e.g. kitty)")
 }
 
 func hasDisplay() bool {
@@ -174,7 +176,7 @@ func terminate(pid int) {
 	if err != nil {
 		return
 	}
-	_ = p.Signal(syscall.SIGTERM)
+	p.Signal(syscall.SIGTERM) // ignore error, process may be gone
 }
 
 func processAlive(pid int) bool {

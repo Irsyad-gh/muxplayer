@@ -1,10 +1,11 @@
 package audiocap
 
+// note: the buffer blocks forever if nobody writes and nobody closes, which is on purpose
+
 import "sync"
 
-// buffer turns a push-based capture callback into the pull-based Source API.
-// It keeps the most recent audio and drops the oldest samples when the consumer
-// falls behind, so a slow UI never stalls the audio thread.
+// buffer turns push-based capture into the pull-based Source API. It keeps the
+// newest audio and drops old samples when the consumer falls behind.
 type buffer struct {
 	mu     sync.Mutex
 	cond   *sync.Cond

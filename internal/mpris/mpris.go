@@ -1,9 +1,8 @@
-// Package mpris publishes muxplayer as an MPRIS player on the session bus so
-// desktop media controllers (bars, applets, media keys) can see and drive it.
-//
-// The platform-independent types and action names live here; the D-Bus
-// implementation is server_unix.go, with a no-op stub for Windows.
+// Package mpris exposes muxplayer to desktop media controllers over D-Bus.
+// The real server is server_unix.go; Windows gets a no-op.
 package mpris
+
+// note: action names are part of the wire protocol, don't rename them
 
 // Action kinds that media controllers invoke on the player.
 const (

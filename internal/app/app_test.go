@@ -1,5 +1,7 @@
 package app
 
+// note: these tests poke unexported state, which is a fair trade for a TUI
+
 import (
 	"os"
 	"path/filepath"
@@ -150,7 +152,7 @@ func TestShuffleRepeat(t *testing.T) {
 func TestStartTrackPlaysFile(t *testing.T) {
 	m := newTestModel()
 	m.dirty = false
-	m.startTrack("/b/3.mp3")
+	m.play(m.add("/b/3.mp3"))
 	if m.cur != 2 {
 		t.Fatalf("cur = %d, want 2 for an existing track", m.cur)
 	}
@@ -158,7 +160,7 @@ func TestStartTrackPlaysFile(t *testing.T) {
 		t.Fatal("starting an existing track should not change the playlist")
 	}
 
-	m.startTrack("/new/6.mp3")
+	m.play(m.add("/new/6.mp3"))
 	if got := m.list[len(m.list)-1]; got != "/new/6.mp3" {
 		t.Fatalf("last track = %q, want /new/6.mp3", got)
 	}

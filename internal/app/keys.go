@@ -1,5 +1,7 @@
 package app
 
+// note: key names come straight from the terminal, don't "fix" them for another emulator
+
 import (
 	"path/filepath"
 
@@ -22,7 +24,6 @@ func (m *model) toggle() {
 	m.mp.Do("cycle", "pause")
 }
 
-// stop halts playback and resets the player block to its idle state.
 func (m *model) stop() {
 	m.mp.Do("stop")
 	m.cur, m.tpos, m.meta = -1, 0, nil

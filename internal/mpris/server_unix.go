@@ -1,9 +1,10 @@
 //go:build !windows
 
-// The D-Bus side of the MPRIS interface: bus setup, introspection, exported
-// methods, and property updates. Uses godbus's prop server so every property
-// change magically becomes a PropertiesChanged signal.
+// The D-Bus side of MPRIS: bus setup, introspection, methods, and properties.
+// godbus's prop server turns property changes into signals for us.
 package mpris
+
+// note: dbus method tables are tedious, but at least they're explicit
 
 import (
 	"fmt"
@@ -50,23 +51,23 @@ func Start() *Server {
 	root := &rootIface{s: s}
 	player := &playerIface{s: s}
 	if err = conn.Export(root, Path, rootName); err != nil {
-		diag.Debugf("mpris: cannot export root interface: %v", err)
+		diag.Debugf("mpris: export root: %v", err)
 		conn.Close()
 		return nil
 	}
 	if err = conn.Export(player, Path, playerName); err != nil {
-		diag.Debugf("mpris: cannot export player interface: %v", err)
+		diag.Debugf("mpris: export player: %v", err)
 		conn.Close()
 		return nil
 	}
 	if s.props, err = prop.Export(conn, Path, propsSpec(s)); err != nil {
-		diag.Debugf("mpris: cannot export properties: %v", err)
+		diag.Debugf("mpris: export props: %v", err)
 		conn.Close()
 		return nil
 	}
 	exportIntrospection(conn, root, player, s.props)
 	if !s.claimName(conn) {
-		diag.Debugf("mpris: cannot claim a bus name")
+		diag.Debugf("mpris: bus name claim failed")
 		conn.Close()
 		return nil
 	}
@@ -212,7 +213,7 @@ func (s *Server) Close() {
 	if s == nil || s.conn == nil {
 		return
 	}
-	_ = s.conn.Close()
+	s.conn.Close() // ignore error, we're shutting down
 }
 
 // Update pushes a snapshot; only properties whose value changed reach the bus
@@ -284,6 +285,6 @@ func metadataMap(st Snapshot) map[string]dbus.Variant {
 // trackID derives a stable, path-safe mpris:trackid from the track path.
 func trackID(path string) dbus.ObjectPath {
 	h := fnv.New32a()
-	_, _ = h.Write([]byte(path))
+	h.Write([]byte(path)) // ignore error, hash writes never fail
 	return dbus.ObjectPath(trackPfx + strconv.FormatUint(uint64(h.Sum32()), 10))
 }

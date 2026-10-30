@@ -2,6 +2,8 @@
 
 package audiocap
 
+// note: COM cleanup here is hand-rolled and fragile, handle with care
+
 import (
 	"encoding/binary"
 	"errors"
@@ -96,7 +98,7 @@ type hresult uint32
 func (h hresult) failed() bool { return h&0x80000000 != 0 }
 
 func (h hresult) err(op string) error {
-	return fmt.Errorf("%s failed (HRESULT 0x%08X)", op, uint32(h))
+	return fmt.Errorf("%s: 0x%08X", op, uint32(h))
 }
 
 // waveFormatEx mirrors the first 18 bytes of WAVEFORMATEX. Go may pad the
@@ -128,7 +130,7 @@ type waveFormatExtensible struct {
 	subFormat      windows.GUID
 }
 
-const _ = uint(40 - unsafe.Sizeof(waveFormatExtensible{}))
+const _ = uint(40 - unsafe.Sizeof(waveFormatExtensible{})) // compile-time size check, not an error
 
 type sampleKind int
 
@@ -311,12 +313,12 @@ func openLoopback() (*wasapiDevice, error) {
 func parseFormat(p unsafe.Pointer) (Format, sampleKind, int, error) {
 	wf := (*waveFormatEx)(p)
 	if wf.channels == 0 || wf.samplesPerSec == 0 || wf.blockAlign == 0 {
-		return Format{}, 0, 0, errors.New("WASAPI returned an empty mix format")
+		return Format{}, 0, 0, errors.New("empty WASAPI mix format")
 	}
 	tag := wf.formatTag
 	if tag == wfTagExtensible {
 		if wf.cbSize < 22 {
-			return Format{}, 0, 0, errors.New("WASAPI returned a truncated WAVEFORMATEXTENSIBLE")
+			return Format{}, 0, 0, errors.New("truncated WAVEFORMATEXTENSIBLE")
 		}
 		ext := (*waveFormatExtensible)(p)
 		switch ext.subFormat {
@@ -325,13 +327,13 @@ func parseFormat(p unsafe.Pointer) (Format, sampleKind, int, error) {
 		case ksSubtypeIEEE:
 			tag = wfTagFloat
 		default:
-			return Format{}, 0, 0, fmt.Errorf("unsupported WAVEFORMATEXTENSIBLE subtype %v", ext.subFormat)
+			return Format{}, 0, 0, fmt.Errorf("unknown WAVEFORMATEXTENSIBLE subtype %v", ext.subFormat)
 		}
 	}
 
 	bytesPerSample := int(wf.blockAlign) / int(wf.channels)
 	if bytesPerSample*int(wf.channels) != int(wf.blockAlign) {
-		return Format{}, 0, 0, fmt.Errorf("invalid WASAPI block alignment %d for %d channels", wf.blockAlign, wf.channels)
+		return Format{}, 0, 0, fmt.Errorf("bad block alignment %d for %d channels", wf.blockAlign, wf.channels)
 	}
 	bits := int(wf.bitsPerSample)
 
@@ -346,7 +348,7 @@ func parseFormat(p unsafe.Pointer) (Format, sampleKind, int, error) {
 	case tag == wfTagPCM && bits == 32 && bytesPerSample == 4:
 		kind = sampleInt32
 	default:
-		return Format{}, 0, 0, fmt.Errorf("unsupported WASAPI mix format: tag %d, %d bits, %d bytes/sample", tag, bits, bytesPerSample)
+		return Format{}, 0, 0, fmt.Errorf("bad mix format: tag %d, %d bits, %d bytes/sample", tag, bits, bytesPerSample)
 	}
 	return Format{SampleRate: int(wf.samplesPerSec), Channels: int(wf.channels)}, kind, int(wf.blockAlign), nil
 }

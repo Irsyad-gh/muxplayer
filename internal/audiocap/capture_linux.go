@@ -2,6 +2,8 @@
 
 package audiocap
 
+// note: pulse has no context in the default client, so failures are a little vague
+
 import (
 	"fmt"
 	"sync"
@@ -22,7 +24,7 @@ type pulseSource struct {
 func open(opts Options) (Source, error) {
 	client, err := pulse.NewClient(pulse.ClientApplicationName("muxplayer"))
 	if err != nil {
-		return nil, fmt.Errorf("connect to PulseAudio/PipeWire: %w", err)
+		return nil, fmt.Errorf("pulse connect: %w", err)
 	}
 
 	sink, err := client.DefaultSink()
@@ -31,7 +33,7 @@ func open(opts Options) (Source, error) {
 	}
 	if err != nil {
 		client.Close()
-		return nil, fmt.Errorf("find output sink: %w", err)
+		return nil, fmt.Errorf("find sink: %w", err)
 	}
 
 	rate := opts.SampleRate
@@ -62,7 +64,7 @@ func open(opts Options) (Source, error) {
 	stream, err := client.NewRecord(writer, recordOpts...)
 	if err != nil {
 		client.Close()
-		return nil, fmt.Errorf("create record stream: %w", err)
+		return nil, fmt.Errorf("record stream: %w", err)
 	}
 
 	format := Format{SampleRate: stream.SampleRate(), Channels: stream.Channels()}

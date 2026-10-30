@@ -1,5 +1,7 @@
 package term
 
+// note: this only checks the portable bits, terminal state needs a real tty
+
 import "testing"
 
 func TestCellAspect(t *testing.T) {

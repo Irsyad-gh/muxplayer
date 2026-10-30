@@ -2,6 +2,8 @@
 
 package debugmode
 
+// note: this test skips itself when no terminal is installed
+
 import (
 	"os"
 	"path/filepath"

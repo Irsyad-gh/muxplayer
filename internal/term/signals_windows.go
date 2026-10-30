@@ -2,6 +2,8 @@
 
 package term
 
+// note: windows has no SIGWINCH, so resize is polled elsewhere
+
 import (
 	"os"
 	"os/signal"

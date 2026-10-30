@@ -1,5 +1,7 @@
 package main
 
+// note: these tests re-exec the test binary, which is ugly but catches real startup bugs
+
 import (
 	"context"
 	"os"

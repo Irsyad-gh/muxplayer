@@ -1,5 +1,7 @@
 package app
 
+// note: these fixtures create real files because WalkDir doesn't care about fakes
+
 import (
 	"os"
 	"path/filepath"

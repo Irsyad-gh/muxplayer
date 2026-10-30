@@ -1,17 +1,11 @@
 package app
 
+// note: mpv sends numbers as float64, so these type assertions are load-bearing
+
 import (
 	"muxplayer/internal/cover"
 	"muxplayer/internal/diag"
 )
-
-func (m *model) handleInput(in input) bool {
-	if in.mouse {
-		m.onMouse(in)
-		return false
-	}
-	return m.onKey(in.key)
-}
 
 func (m *model) handleEvent(e map[string]any) {
 	switch e["event"] {
@@ -28,15 +22,25 @@ func (m *model) handleProperty(e map[string]any) {
 	d := e["data"]
 	switch e["name"] {
 	case "time-pos":
-		m.tpos, _ = d.(float64)
+		if v, ok := d.(float64); ok {
+			m.tpos = v
+		}
 	case "duration":
-		m.dur, _ = d.(float64)
+		if v, ok := d.(float64); ok {
+			m.dur = v
+		}
 	case "pause":
-		m.paused, _ = d.(bool)
+		if v, ok := d.(bool); ok {
+			m.paused = v
+		}
 	case "volume":
-		m.vol, _ = d.(float64)
+		if v, ok := d.(float64); ok {
+			m.vol = v
+		}
 	case "metadata":
-		m.meta, _ = d.(map[string]any)
+		if v, ok := d.(map[string]any); ok {
+			m.meta = v
+		}
 	}
 }
 

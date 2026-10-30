@@ -2,6 +2,8 @@
 
 package mpv
 
+// note: unix socket paths have a length limit, so the hash keeps them short
+
 import (
 	"fmt"
 	"io"
@@ -29,4 +31,6 @@ func dial(addr string) (io.ReadWriteCloser, error) {
 	return nil, err
 }
 
-func cleanup(addr string) { _ = os.Remove(addr) }
+func cleanup(addr string) {
+	os.Remove(addr) // ignore error, socket may already be gone
+}

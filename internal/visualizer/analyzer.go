@@ -9,13 +9,14 @@ const (
 	minDB = -70.0 // quietest level shown
 	maxDB = -5.0  // headroom above a full-scale sine
 
+	// note: attack/release tuned by ear, not by science
+
 	attack  = 0.55 // how quickly bars rise
 	release = 0.18 // how quickly bars fall
 )
 
-// Analyzer turns mono PCM samples into normalised spectrum bars. It is the
-// reusable DSP core of the package; it has no dependency on audio capture or a
-// terminal.
+// Analyzer turns mono PCM samples into spectrum bars. It's the reusable DSP
+// bit and doesn't care where the audio came from.
 type Analyzer struct {
 	rate      int
 	bars      int
@@ -27,22 +28,17 @@ type Analyzer struct {
 	levels    []float64
 }
 
-// NewAnalyzer prepares an analyser for mono samples at sampleRate. bars is the
-// number of output levels and fftSize is the analysis window in samples; it
-// must be a power of two and at least 256.
-//
-// The frequency range is logarithmic from 40 Hz to 16 kHz (clamped to the
-// Nyquist frequency), which gives useful bass resolution while keeping the
-// treble from being squeezed into a few bars.
+// NewAnalyzer sets up the FFT and band edges for mono samples at sampleRate.
+// fftSize must be a power of two >= 256; bands span 40 Hz..16 kHz (or Nyquist).
 func NewAnalyzer(sampleRate, bars, fftSize int) (*Analyzer, error) {
 	if sampleRate <= 0 {
-		return nil, fmt.Errorf("visualizer: invalid sample rate %d", sampleRate)
+		return nil, fmt.Errorf("bad sample rate %d", sampleRate)
 	}
 	if bars <= 0 {
-		return nil, fmt.Errorf("visualizer: invalid bar count %d", bars)
+		return nil, fmt.Errorf("bad bar count %d", bars)
 	}
 	if fftSize < 256 || fftSize&(fftSize-1) != 0 {
-		return nil, fmt.Errorf("visualizer: FFT size %d is not a power of two >= 256", fftSize)
+		return nil, fmt.Errorf("fft size %d not a power of two >= 256", fftSize)
 	}
 
 	a := &Analyzer{
@@ -57,16 +53,16 @@ func NewAnalyzer(sampleRate, bars, fftSize int) (*Analyzer, error) {
 	}
 
 	for i := range a.window {
-		// Hann window reduces spectral leakage between adjacent bars.
+		// Hann window keeps neighbouring bars from bleeding into each other.
 		a.window[i] = 0.5 - 0.5*math.Cos(2*math.Pi*float64(i)/float64(fftSize-1))
 		a.windowSum += a.window[i]
 	}
 
 	nyquist := float64(sampleRate) / 2
 	low := 40.0
-	high := math.Min(16000, nyquist*0.95)
+	high := min(16000, nyquist*0.95)
 	if high <= low*1.5 {
-		low = math.Max(20, high/8)
+		low = max(20, high/8)
 	}
 
 	binHz := float64(sampleRate) / float64(fftSize)
@@ -81,8 +77,8 @@ func NewAnalyzer(sampleRate, bars, fftSize int) (*Analyzer, error) {
 		if bin > maxBin {
 			bin = maxBin
 		}
-		// With a high-resolution FFT several low bands can round to the same
-		// bin. Give each band at least one bin of its own while space allows.
+		// With a big FFT several low bands can land on the same bin. Give each
+		// one a bin of its own while we still have room.
 		if bin <= prev && prev < maxBin {
 			bin = prev + 1
 		}
@@ -92,15 +88,10 @@ func NewAnalyzer(sampleRate, bars, fftSize int) (*Analyzer, error) {
 	return a, nil
 }
 
-// Bands returns the number of bars the analyser produces.
 func (a *Analyzer) Bands() int { return a.bars }
 
-// AnalyzeInto writes bar levels in the range 0..1 to dst and returns dst. dst
-// may be shorter than Bands; the remaining levels are simply not written.
-//
-// samples may contain any number of mono samples. The most recent fftSize are
-// used and shorter input is zero-padded at the start. The returned values are
-// smoothed over time, so a single call is not an instantaneous snapshot.
+// AnalyzeInto writes bar levels (0..1) into dst. It uses the newest fftSize
+// samples, zero-pads the front, and smooths the result over time.
 func (a *Analyzer) AnalyzeInto(dst []float64, samples []float32) []float64 {
 	for i := range a.re {
 		a.re[i] = 0

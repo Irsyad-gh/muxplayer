@@ -1,7 +1,9 @@
 //go:build windows
 
-// Package proc ties child processes to the lifetime of muxplayer.
+// Package proc makes sure child processes die when muxplayer does.
 package proc
+
+// note: the job handle is leaked on purpose so Windows kills children when we exit
 
 import (
 	"os/exec"

@@ -1,5 +1,7 @@
 package visualizer
 
+// note: ring wrapping is easy to get wrong, so the tests cover the ugly cases
+
 import "testing"
 
 func TestRingLatestPadsAndKeepsOrder(t *testing.T) {

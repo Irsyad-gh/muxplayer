@@ -2,6 +2,8 @@
 // the player side of controller commands.
 package app
 
+// note: mpris arg parsing is loose on purpose; controllers send whatever they want
+
 import (
 	"net/url"
 	"path/filepath"
@@ -19,7 +21,6 @@ var mprisLoop = [...]string{
 	mpris.LoopTrack,    // repeatN
 }
 
-// snapshot converts the model into a state snapshot for the bus.
 func (m *model) snapshot() mpris.Snapshot {
 	st := mpris.Snapshot{
 		Loop:    mprisLoop[m.repeat],
@@ -98,9 +99,12 @@ func (m *model) action(a mpris.Action) bool {
 	return false
 }
 
-// setLoop maps a controller loop request onto the repeat mode.
 func (m *model) setLoop(arg any) {
-	switch s, _ := arg.(string); s {
+	s := ""
+	if v, ok := arg.(string); ok {
+		s = v
+	}
+	switch s {
 	case mpris.LoopTrack:
 		m.repeat, m.played = repeatOne, 1
 	case mpris.LoopPlaylist:
@@ -110,7 +114,6 @@ func (m *model) setLoop(arg any) {
 	}
 }
 
-// openURI plays a controller-supplied file URI by adding it to the playlist.
 func (m *model) openURI(arg any) {
 	s, ok := arg.(string)
 	if !ok {

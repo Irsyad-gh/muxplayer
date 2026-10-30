@@ -1,5 +1,7 @@
 package app
 
+// note: cover cache is tiny and dumb, but decoding every frame was worse
+
 import (
 	"fmt"
 

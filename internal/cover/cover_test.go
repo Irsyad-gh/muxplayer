@@ -1,5 +1,7 @@
 package cover
 
+// note: these tests only run when ffmpeg is on PATH
+
 import (
 	"os/exec"
 	"path/filepath"

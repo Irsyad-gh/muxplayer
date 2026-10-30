@@ -1,5 +1,7 @@
 package audiocap
 
+// note: these tests race close against a blocked Read, so they can be flaky on slow machines
+
 import (
 	"errors"
 	"testing"
@@ -28,13 +30,21 @@ func TestBufferWrapsReads(t *testing.T) {
 	b := newBuffer(Format{SampleRate: 48000, Channels: 1}, 5)
 	b.push([]float32{1, 2, 3, 4, 5})
 	first := make([]float32, 2)
-	if n, _ := b.Read(first); n != 2 || first[0] != 1 || first[1] != 2 {
+	n, err := b.Read(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 || first[0] != 1 || first[1] != 2 {
 		t.Fatalf("first read = %v (%d)", first, n)
 	}
 	b.push([]float32{6, 7})
 
 	rest := make([]float32, 5)
-	if n, _ := b.Read(rest); n != 5 {
+	n, err = b.Read(rest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 5 {
 		t.Fatalf("rest read = %d", n)
 	}
 	want := []float32{3, 4, 5, 6, 7}

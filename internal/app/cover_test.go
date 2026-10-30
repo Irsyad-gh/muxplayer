@@ -1,5 +1,7 @@
 package app
 
+// note: aspect parsing accepts junk on purpose, the env var is best effort
+
 import (
 	"fmt"
 	"testing"

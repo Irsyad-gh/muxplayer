@@ -1,5 +1,7 @@
 package visualizer
 
+// note: the fake source sleeps 1ms per read to look like a real audio callback
+
 import (
 	"math"
 	"sync"

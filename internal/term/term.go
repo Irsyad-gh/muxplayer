@@ -1,6 +1,7 @@
-// Package term owns the platform-specific terminal state: raw mode, the
-// alternate screen, window size and signal handling.
+// Package term handles raw mode, the alternate screen, window size, and signals.
 package term
+
+// note: escape sequences are hard-coded; terminfo can wait
 
 const (
 	enterScreen = "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1002h\x1b[?1006h\x1b[2J"

@@ -1,5 +1,7 @@
 package app
 
+// note: mouse handling is best effort, terminal reporting varies too much
+
 import "time"
 
 func (m *model) onMouse(in input) {
@@ -85,24 +87,21 @@ func (m *model) clickBar(x, y int) {
 
 func (m *model) clickButton(x, y int) {
 	for i, r := range m.hBtn {
-		if r.in(x, y) {
-			m.activateButton(i)
-			return
+		if !r.in(x, y) {
+			continue
 		}
-	}
-}
-
-func (m *model) activateButton(i int) {
-	switch i {
-	case 0:
-		m.cycleRepeat()
-	case 1:
-		m.prev()
-	case 2:
-		m.toggle()
-	case 3:
-		m.step(1, false)
-	case 4:
-		m.cycleShuffle()
+		switch i {
+		case 0:
+			m.cycleRepeat()
+		case 1:
+			m.prev()
+		case 2:
+			m.toggle()
+		case 3:
+			m.step(1, false)
+		case 4:
+			m.cycleShuffle()
+		}
+		return
 	}
 }

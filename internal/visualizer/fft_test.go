@@ -1,5 +1,7 @@
 package visualizer
 
+// note: the O(n²) DFT is only here to keep the fast one honest
+
 import (
 	"math"
 	"testing"

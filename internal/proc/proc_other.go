@@ -1,7 +1,9 @@
 //go:build !windows
 
-// Package proc ties child processes to the lifetime of muxplayer.
+// Package proc makes sure child processes die when muxplayer does.
 package proc
+
+// note: windows has the real job-object code; everywhere else the normal shutdown path is enough
 
 import "os/exec"
 

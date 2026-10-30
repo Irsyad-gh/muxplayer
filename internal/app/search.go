@@ -1,8 +1,11 @@
 package app
 
+// note: the index is never invalidated while browsing, which is fine until it isn't
+
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -10,22 +13,18 @@ import (
 	"muxplayer/internal/diag"
 )
 
-// setQuery updates the explorer search text and refreshes the listing.
 func (m *model) setQuery(q string) {
 	m.query = q
 	m.applyFilter()
 }
 
-// filterActive reports whether a name query or a type filter hides any files.
 func (m *model) filterActive() bool {
 	return strings.TrimSpace(m.query) != "" || m.typeFilter != ""
 }
 
-// applyFilter rebuilds the explorer's visible rows. While a query is active it
-// searches the whole tree below m.dir and shows matches with paths relative to
-// that root. Without a query it filters the immediate listing, keeping
-// directories visible so they can be navigated. The selected entry is kept when
-// it survives the filter.
+// applyFilter rebuilds the visible rows. A query searches the whole tree below
+// m.dir and shows matches relative to it; browsing keeps directories visible
+// so they can still be entered. The selection survives when it still matches.
 func (m *model) applyFilter() {
 	prev := ""
 	if e, ok := m.selectedEntry(); ok {
@@ -34,7 +33,7 @@ func (m *model) applyFilter() {
 
 	if len(m.terms()) > 0 {
 		m.entries = m.searchEntries()
-		m.view = identity(len(m.entries))
+		m.view = inOrder(len(m.entries))
 	} else {
 		m.entries = m.listing
 		m.view = m.browseView()
@@ -52,8 +51,6 @@ func (m *model) applyFilter() {
 	m.lastRow = -1
 }
 
-// browseView filters and orders the immediate listing: ".." first, then
-// directories, then files.
 func (m *model) browseView() []int {
 	var parent, dirs, files []int
 	for i, e := range m.entries {
@@ -71,8 +68,8 @@ func (m *model) browseView() []int {
 	m.sortByName(dirs)
 	m.sortByName(files)
 	if m.sortOrder == orderZA {
-		reverseInts(dirs)
-		reverseInts(files)
+		slices.Reverse(dirs)
+		slices.Reverse(files)
 	}
 
 	view := make([]int, 0, len(m.entries))
@@ -82,10 +79,9 @@ func (m *model) browseView() []int {
 	return view
 }
 
-// searchEntries walks the tree once per directory, then filters the cached
-// index on every keystroke. Results carry a path relative to the search root.
-// Extension-only queries list files; folders are only included when a name
-// term matches, so a type search does not dump the whole directory tree.
+// searchEntries matches the whole cached tree; results carry paths relative to
+// the search root. Extension-only queries list files only — a type search must
+// not dump the entire directory tree, so folders need a name term to appear.
 func (m *model) searchEntries() []entry {
 	m.buildIndex()
 	hasName := false
@@ -112,8 +108,8 @@ func (m *model) searchEntries() []entry {
 	sortEntriesByRel(dirs)
 	sortEntriesByRel(files)
 	if m.sortOrder == orderZA {
-		reverseEntries(dirs)
-		reverseEntries(files)
+		slices.Reverse(dirs)
+		slices.Reverse(files)
 	}
 
 	out = append(out, dirs...)
@@ -133,7 +129,7 @@ func (m *model) buildIndex() {
 		root = resolved
 	}
 	idx := make([]entry, 0, 128)
-	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+	filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
 		if err != nil || p == root {
 			return nil
 		}
@@ -156,7 +152,7 @@ func (m *model) buildIndex() {
 			idx = append(idx, entry{name: name, rel: rel})
 		}
 		return nil
-	})
+	}) // ignore error, search is best effort
 	m.index = idx
 }
 
@@ -164,9 +160,8 @@ func (m *model) terms() []string {
 	return strings.Fields(strings.ToLower(m.query))
 }
 
-// matchEntry reports whether an entry passes the search bar and the file-type
-// filter. A term that starts with a dot matches the file extension exactly
-// (".flac"); other terms match anywhere in the name, case-insensitively.
+// dot-terms match the exact extension (".flac"); other terms match anywhere
+// in the name, case-insensitively.
 func (m *model) matchEntry(e entry) bool {
 	name := strings.ToLower(e.name)
 	for _, term := range m.terms() {
@@ -195,18 +190,6 @@ func sortEntriesByRel(es []entry) {
 	})
 }
 
-func reverseEntries(es []entry) {
-	for i, j := 0, len(es)-1; i < j; i, j = i+1, j-1 {
-		es[i], es[j] = es[j], es[i]
-	}
-}
-
-func reverseInts(xs []int) {
-	for i, j := 0, len(xs)-1; i < j; i, j = i+1, j-1 {
-		xs[i], xs[j] = xs[j], xs[i]
-	}
-}
-
 // selectedEntry returns the entry under the explorer cursor. The playlist has
 // its own index space, so this is explorer-only.
 func (m *model) selectedEntry() (entry, bool) {
@@ -216,10 +199,9 @@ func (m *model) selectedEntry() (entry, bool) {
 	return m.entries[m.view[m.sel[1]]], true
 }
 
-// typeChoices lists "any" plus the file types reachable from the current
-// directory. During a search it uses the recursive index, otherwise the
-// immediate listing. A filter carried in from another folder stays selectable
-// so it can be cycled back to "any".
+// typeChoices lists "any" plus the extensions available where we browsed
+// last. A filter from another directory stays in the list so it can be cycled
+// back to "any".
 func (m *model) typeChoices() []string {
 	src := m.listing
 	if len(m.terms()) > 0 {
@@ -269,8 +251,8 @@ func (m *model) toggleOrder() {
 	m.applyFilter()
 }
 
-// typeKey feeds a key to the search bar and reports whether it belonged to the
-// query. Named navigation keys are left for the normal shortcut handler.
+// typeKey runs a key through the search bar; named navigation keys are left
+// for the normal shortcut handler.
 func (m *model) typeKey(k string) bool {
 	if !m.searching || m.tab != 1 {
 		return false

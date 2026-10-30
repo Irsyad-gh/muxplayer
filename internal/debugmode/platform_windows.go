@@ -2,6 +2,8 @@
 
 package debugmode
 
+// note: the windows launcher writes a temp .bat, which is ugly but good enough
+
 import (
 	"fmt"
 	"os"
@@ -36,7 +38,7 @@ func writeLauncher(dir, self string, args []string, logPath, statusPath, pidPath
 	fmt.Fprintf(&b, "move /Y %s %s >nul\r\n", batArg(statusPath+".tmp"), batArg(statusPath))
 
 	if err := os.WriteFile(path, []byte(b.String()), 0o600); err != nil {
-		return "", fmt.Errorf("cannot write debug launcher: %w", err)
+		return "", fmt.Errorf("write debug launcher: %w", err)
 	}
 	return path, nil
 }
@@ -79,7 +81,7 @@ func terminate(pid int) {
 	if err != nil {
 		return
 	}
-	_ = p.Kill()
+	p.Kill() // ignore error, process may be gone
 }
 
 func processAlive(pid int) bool {

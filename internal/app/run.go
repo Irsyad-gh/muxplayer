@@ -1,6 +1,7 @@
-// Package app implements muxplayer's terminal UI: the player model, playlist,
-// drawing, and input handling.
+// Package app is muxplayer's terminal UI: model, playlist, drawing, and input.
 package app
+
+// note: 33ms is close enough to 30fps, nobody is counting frames
 
 import (
 	"bytes"
@@ -25,7 +26,7 @@ func Run(p *mpv.Player, dir, track string) {
 	m := newModel(p)
 	m.load(dir)
 	if track != "" {
-		m.startTrack(track)
+		m.play(m.add(track))
 	} else if len(m.list) == 0 {
 		m.tab = 1
 	}
@@ -33,14 +34,6 @@ func Run(p *mpv.Player, dir, track string) {
 	mpr := mpris.Start()
 	diag.Debugf("app: MPRIS available: %v", mpr != nil)
 	run(m, mpr)
-}
-
-// startTrack adds track to the playlist when it is missing and begins playback.
-func (m *model) startTrack(track string) {
-	if track == "" {
-		return
-	}
-	m.play(m.add(track))
 }
 
 // view tracks the previous frame for diffed rendering and resize handling.
@@ -60,7 +53,7 @@ func (v *view) render(m *model) {
 	if w != v.w || h != v.h {
 		diag.Debugf("terminal: %dx%d cells, cell aspect %.2f", w, h, aspect)
 		v.w, v.h, v.prev = w, h, nil
-		_, _ = os.Stdout.WriteString("\x1b[2J")
+		os.Stdout.WriteString("\x1b[2J") // ignore error, terminal is probably gone
 	}
 	m.draw(w, h)
 	v.flush(m.scr.rows())
@@ -75,7 +68,7 @@ func (v *view) flush(rows []string) {
 		fmt.Fprintf(&buf, "\x1b[%d;1H%s", i+1, row)
 	}
 	v.prev = rows
-	_, _ = os.Stdout.Write(buf.Bytes())
+	os.Stdout.Write(buf.Bytes()) // ignore error, terminal is probably gone
 }
 
 func run(m *model, mpr *mpris.Server) {
@@ -90,7 +83,7 @@ func run(m *model, mpr *mpris.Server) {
 			Device: os.Getenv("MUXPLAYER_AUDIO_SINK"),
 		},
 		OnError: func(err error) {
-			diag.Debugf("visualizer: capture failed: %v", err)
+			diag.Debugf("visualizer: capture error: %v", err)
 		},
 	})
 	if err != nil {
@@ -117,7 +110,9 @@ func run(m *model, mpr *mpris.Server) {
 			if !in.mouse || in.btn != 32 {
 				diag.Debugf("input: %+v", in)
 			}
-			if m.handleInput(in) {
+			if in.mouse {
+				m.onMouse(in)
+			} else if m.onKey(in.key) {
 				return
 			}
 		case ev, ok := <-evCh:
@@ -185,12 +180,12 @@ func (m *model) flushPlaylist() {
 func (m *model) savePlaylist() {
 	path := plPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		diag.Warnf("cannot create config dir: %v", err)
+		diag.Warnf("create config dir: %v", err)
 		return
 	}
 	data := []byte(strings.Join(m.list, "\n"))
 	if err := writeFileAtomic(path, data, 0o644); err != nil {
-		diag.Warnf("cannot save playlist: %v", err)
+		diag.Warnf("save playlist: %v", err)
 		return
 	}
 	m.dirty = false
@@ -229,8 +224,8 @@ func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 	// Best effort: make the rename itself durable. Directory sync is not
 	// supported everywhere, so its failure is not treated as an error.
 	if d, err := os.Open(dir); err == nil {
-		_ = d.Sync()
-		_ = d.Close()
+		d.Sync()  // ignore error, dir sync is best effort
+		d.Close() // ignore error, we're done with it
 	}
 	return nil
 }

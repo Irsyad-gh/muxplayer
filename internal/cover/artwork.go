@@ -1,7 +1,8 @@
-// Artwork reuse for the MPRIS interface: controllers cannot read pixel
-// buffers, so they share artwork files instead — either a folder image or the
-// track's embedded front cover extracted once to the user cache.
+// Artwork reuse for MPRIS: controllers can't read pixels, so they get a file.
+// We use a folder image or extract the embedded front cover once.
 package cover
+
+// note: the colour math is made up, but it looks right
 
 import (
 	"fmt"
@@ -56,7 +57,7 @@ func extractArt(src string) string {
 		return ""
 	}
 	h := fnv.New32a()
-	_, _ = h.Write([]byte(src))
+	h.Write([]byte(src)) // ignore error, hash writes never fail
 	dst := filepath.Join(dir, fmt.Sprintf("%x.jpg", h.Sum32()))
 	if fileExists(dst) {
 		return dst

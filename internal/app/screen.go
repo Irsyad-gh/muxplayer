@@ -1,5 +1,7 @@
 package app
 
+// note: screen diffing assumes the terminal doesn't scroll behind our back
+
 import (
 	"fmt"
 	"strings"

@@ -1,21 +1,5 @@
-// Package visualizer turns captured audio into normalised spectrum bars.
-//
-// Start opens the platform audio capture by default, but accepts any
-// audiocap.Source through Config. The capture reader, FFT analyser and frame
-// timer are independent of the terminal UI: callers receive a []float64 of bar
-// heights in the range 0..1 on a channel and can render it however they like.
-//
-// Typical use:
-//
-//	frames := make(chan []float64, 4)
-//	v, err := visualizer.Start(frames, visualizer.Config{})
-//	if err != nil {
-//		// visualizer is unavailable; the rest of the program can keep running
-//	}
-//	defer v.Close()
-//	for bars := range frames {
-//		draw(bars)
-//	}
+// Package visualizer captures live audio and turns it into spectrum bars.
+// Works with any audiocap.Source; if nobody reads fast we just drop frames.
 package visualizer
 
 import (
@@ -34,28 +18,19 @@ const (
 	DefaultFFTSize = 8192
 )
 
-// Config controls a Visualizer. The zero value is valid.
+// Config controls a Visualizer; the zero value is fine.
 type Config struct {
-	// Bars is the number of level values per frame. Zero uses DefaultBars.
-	Bars int
+	Bars    int // bar count per frame; DefaultBars when 0
+	FPS     int // frames per second; DefaultFPS when 0
+	FFTSize int // analysis window in samples; DefaultFFTSize when 0, must be a power of two ≥ 256
 
-	// FPS is the number of frames per second. Zero uses DefaultFPS.
-	FPS int
-
-	// FFTSize is the analysis window in samples. Zero uses DefaultFFTSize.
-	// It must be a power of two and at least 256.
-	FFTSize int
-
-	// Audio configures the built-in system-audio capture. It is ignored when
-	// Source is set.
+	// Audio selects the capture device; ignored when Source is set.
 	Audio audiocap.Options
-
-	// Source supplies samples from a custom capture backend. The Visualizer
-	// takes ownership and closes it. When nil, audiocap.Open is used.
+	// Source supplies samples from a custom backend; the Visualizer owns and
+	// closes it.
 	Source audiocap.Source
-
-	// OnError, when set, is called from the capture goroutine if capture fails
-	// after Start returned. It should return quickly and must not call Close.
+	// OnError is called from the capture goroutine when capture fails after
+	// Start returned. It must not call Close.
 	OnError func(error)
 }
 
@@ -76,9 +51,8 @@ type Visualizer struct {
 	captureEnd chan struct{}
 }
 
-// Start opens audio capture and begins producing frames. Each frame is a fresh
-// slice, so callers may retain it. Sends are non-blocking: if the channel is not
-// being read, the newest frame is dropped rather than slowing audio capture.
+// Start produces one frame per tick: a fresh []float64 copy of the bar levels,
+// so callers can hang on to it if they want.
 func Start(ch chan<- []float64, cfg Config) (*Visualizer, error) {
 	bars := cfg.Bars
 	if bars == 0 {
@@ -93,10 +67,10 @@ func Start(ch chan<- []float64, cfg Config) (*Visualizer, error) {
 		fftSize = DefaultFFTSize
 	}
 	if bars < 1 || bars > 1024 {
-		return nil, fmt.Errorf("visualizer: invalid bar count %d", bars)
+		return nil, fmt.Errorf("invalid bar count %d (max 1024)", bars)
 	}
 	if fps < 1 || fps > 240 {
-		return nil, fmt.Errorf("visualizer: invalid frame rate %d", fps)
+		return nil, fmt.Errorf("invalid fps %d (1..240)", fps)
 	}
 
 	src := cfg.Source
@@ -109,12 +83,12 @@ func Start(ch chan<- []float64, cfg Config) (*Visualizer, error) {
 	}
 	format := src.Format()
 	if format.SampleRate <= 0 || format.Channels <= 0 {
-		_ = src.Close()
-		return nil, fmt.Errorf("visualizer: invalid capture format %d Hz / %d channels", format.SampleRate, format.Channels)
+		src.Close() // ignore error, we already have one
+		return nil, fmt.Errorf("bad capture format %d Hz / %d channels", format.SampleRate, format.Channels)
 	}
 	an, err := NewAnalyzer(format.SampleRate, bars, fftSize)
 	if err != nil {
-		_ = src.Close()
+		src.Close() // ignore error, we're returning that one instead
 		return nil, err
 	}
 
@@ -136,15 +110,14 @@ func Start(ch chan<- []float64, cfg Config) (*Visualizer, error) {
 	return v, nil
 }
 
-// Close stops the visualizer and releases the audio source. It is safe to call
-// more than once and is safe on a nil receiver.
+// Close releases the audio source and stops the goroutines; nil-safe.
 func (v *Visualizer) Close() {
 	if v == nil {
 		return
 	}
 	v.closed.Do(func() {
 		close(v.done)
-		_ = v.src.Close()
+		v.src.Close() // ignore error, nothing useful to do with it here
 	})
 	v.wg.Wait()
 }
@@ -156,6 +129,8 @@ func (v *Visualizer) capture() {
 	channels := v.src.Format().Channels
 	samples := make([]float32, 4096*channels)
 	mono := make([]float32, 4096)
+
+	// note: mono mixing is dumb but easy to change later
 
 	for {
 		n, err := v.src.Read(samples)
@@ -193,8 +168,8 @@ func (v *Visualizer) run() {
 		case <-v.done:
 			return
 		case <-ticker.C:
-			// Once capture stops, discard stale samples and let the bars fall
-			// to zero instead of freezing on the last frame.
+			// When capture ends we still want the bars to fade out smoothly
+			// instead of freezing on the last frame. Just clear the ring.
 			select {
 			case <-v.captureEnd:
 				v.ring.clear()

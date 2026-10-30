@@ -1,7 +1,8 @@
-// Package diag writes diagnostics to stderr. The TUI owns stdout, so every
-// message goes to stderr with a severity; DEBUG lines stay silent unless
-// MUXPLAYER_DEBUG is set.
+// Package diag writes muxplayer's diagnostics to stderr.
+// Debug lines stay quiet unless MUXPLAYER_DEBUG is set.
 package diag
+
+// note: env is read once at startup, so changing MUXPLAYER_DEBUG later does nothing
 
 import (
 	"fmt"

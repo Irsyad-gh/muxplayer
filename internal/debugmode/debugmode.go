@@ -1,6 +1,7 @@
-// Package debugmode runs the player UI in a separate terminal window and
-// mirrors its diagnostic log in the original window.
+// Package debugmode runs the UI in its own terminal and mirrors the log back here.
 package debugmode
+
+// note: the debug launcher is a lot of shell script for a feature nobody uses daily
 
 import (
 	"errors"
@@ -28,7 +29,7 @@ func EnterChild() {
 	if path := os.Getenv(pidEnv); path != "" {
 		tmp := path + ".tmp"
 		if os.WriteFile(tmp, []byte(strconv.Itoa(os.Getpid())), 0o600) == nil {
-			_ = os.Rename(tmp, path)
+			os.Rename(tmp, path) // ignore error, pid file is best effort
 		}
 	}
 }
@@ -41,12 +42,12 @@ func Run(self string, args []string, version string) (int, error) {
 		self = exe
 	}
 	if self == "" {
-		return 1, errors.New("cannot locate the muxplayer executable")
+		return 1, errors.New("can't find muxplayer executable")
 	}
 
 	dir, err := os.MkdirTemp("", "muxplayer-debug-")
 	if err != nil {
-		return 1, fmt.Errorf("cannot create debug directory: %w", err)
+		return 1, fmt.Errorf("create debug dir: %w", err)
 	}
 	defer os.RemoveAll(dir)
 
@@ -54,7 +55,7 @@ func Run(self string, args []string, version string) (int, error) {
 	statusPath := filepath.Join(dir, "status")
 	pidPath := filepath.Join(dir, "pid")
 	if err := os.WriteFile(logPath, nil, 0o600); err != nil {
-		return 1, fmt.Errorf("cannot create debug log: %w", err)
+		return 1, fmt.Errorf("create debug log: %w", err)
 	}
 
 	script, err := writeLauncher(dir, self, args, logPath, statusPath, pidPath)
@@ -69,11 +70,13 @@ func Run(self string, args []string, version string) (int, error) {
 	// connect to the display) in the debug console.
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
-		return 1, fmt.Errorf("cannot open the debug terminal: %w", err)
+		return 1, fmt.Errorf("open debug terminal: %w", err)
 	}
 	// Reap the launcher in the background. Detaching terminals return
 	// immediately; ones that wait exit when their window closes.
-	go func() { _ = cmd.Wait() }()
+	go func() {
+		cmd.Wait() // ignore error, we only care that it exits
+	}()
 
 	fmt.Printf("muxplayer %s — debug mode\n", version)
 	fmt.Println(strings.Repeat("─", 48))
@@ -91,7 +94,7 @@ func Run(self string, args []string, version string) (int, error) {
 func follow(logPath, statusPath, pidPath string) (int, error) {
 	f, err := os.Open(logPath)
 	if err != nil {
-		return 1, fmt.Errorf("cannot read debug log: %w", err)
+		return 1, fmt.Errorf("read debug log: %w", err)
 	}
 	defer f.Close()
 
@@ -132,7 +135,7 @@ func follow(logPath, statusPath, pidPath string) (int, error) {
 			}
 			if !sawChild {
 				if time.Since(started) > 10*time.Second {
-					return 1, fmt.Errorf("the debug UI did not start; %s", terminalHint())
+					return 1, fmt.Errorf("debug UI didn't start; %s", terminalHint())
 				}
 				continue
 			}
@@ -155,7 +158,7 @@ func follow(logPath, statusPath, pidPath string) (int, error) {
 					fmt.Printf("\r\nmuxplayer exited with status %d\r\n", code)
 					return code, nil
 				}
-				return 1, errors.New("the debug UI stopped unexpectedly")
+				return 1, errors.New("debug UI died")
 			}
 		}
 	}
@@ -165,7 +168,7 @@ func drain(f *os.File, buf []byte) {
 	for {
 		n, err := f.Read(buf)
 		if n > 0 {
-			_, _ = os.Stdout.Write(buf[:n])
+			os.Stdout.Write(buf[:n]) // ignore error, console may be gone
 		}
 		if n == 0 || err != nil {
 			return

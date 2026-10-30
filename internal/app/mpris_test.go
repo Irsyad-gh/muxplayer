@@ -1,5 +1,7 @@
 package app
 
+// note: the fake player records calls instead of pretending to be mpv
+
 import (
 	"testing"
 

@@ -1,5 +1,7 @@
-// Package mpv controls an mpv process over its JSON IPC channel.
+// Package mpv drives an mpv process over its JSON IPC socket.
 package mpv
+
+// note: mpv's IPC is line-delimited JSON, and yes, the IDs are a global counter
 
 import (
 	"bufio"
@@ -26,14 +28,14 @@ func Start() (*Player, error) {
 	diag.Debugf("mpv: starting with IPC endpoint %s", addr)
 	cmd := exec.Command("mpv", commandLine(addr)...)
 	if err := cmd.Start(); err != nil {
-		diag.Debugf("mpv: start failed: %v", err)
+		diag.Debugf("mpv: start error: %v", err)
 		return nil, err
 	}
 	proc.KillOnExit(cmd) // mpv must not outlive muxplayer
 	conn, err := dial(addr)
 	if err != nil {
-		diag.Debugf("mpv: IPC connect failed: %v", err)
-		_ = cmd.Process.Kill()
+		diag.Debugf("mpv: IPC connect error: %v", err)
+		cmd.Process.Kill() // ignore error, mpv may have exited
 		return nil, err
 	}
 	diag.Debugf("mpv: connected")
@@ -43,27 +45,28 @@ func Start() (*Player, error) {
 	return p, nil
 }
 
-// Events yields mpv's property-change and playback events.
 func (p *Player) Events() <-chan map[string]any { return p.ev }
 
-// Do sends a command to mpv.
 func (p *Player) Do(cmd ...any) {
 	if p == nil {
 		return
 	}
 	diag.Debugf("mpv command: %v", cmd)
-	msg, _ := json.Marshal(map[string]any{"command": cmd})
-	_, _ = p.conn.Write(append(msg, '\n'))
+	msg, err := json.Marshal(map[string]any{"command": cmd})
+	if err != nil {
+		diag.Debugf("mpv: marshal command: %v", err)
+		return
+	}
+	p.conn.Write(append(msg, '\n')) // ignore error, event loop will notice
 }
 
-// Close kills mpv and removes the IPC endpoint.
 func (p *Player) Close() {
 	if p == nil {
 		return
 	}
 	diag.Debugf("mpv: closing")
 	if p.cmd != nil && p.cmd.Process != nil {
-		_ = p.cmd.Process.Kill()
+		p.cmd.Process.Kill() // ignore error, likely already gone
 	}
 	cleanup(p.sock)
 }

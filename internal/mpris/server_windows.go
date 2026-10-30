@@ -4,6 +4,8 @@
 // the shared types compiled and makes every call a no-op.
 package mpris
 
+// note: windows gets a no-op server so the rest of the app doesn't care
+
 // Server is an inert placeholder on Windows.
 type Server struct{}
 

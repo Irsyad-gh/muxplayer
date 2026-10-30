@@ -1,5 +1,7 @@
 package app
 
+// note: this is the third version of the playlist config and we're still not happy
+
 import (
 	"fmt"
 	"math"
@@ -119,29 +121,14 @@ func fmtT(s float64) string {
 func (m *model) metaGet(k string) string {
 	for key, v := range m.meta {
 		if strings.EqualFold(key, k) {
-			s, _ := v.(string)
-			return s
+			s, ok := v.(string)
+			if ok {
+				return s
+			}
+			return ""
 		}
 	}
 	return ""
-}
-
-func indexOf(xs []int, v int) int {
-	for i, x := range xs {
-		if x == v {
-			return i
-		}
-	}
-	return -1
-}
-
-func indexOfString(xs []string, v string) int {
-	for i, x := range xs {
-		if x == v {
-			return i
-		}
-	}
-	return -1
 }
 
 func exists(p string) bool {
@@ -150,7 +137,10 @@ func exists(p string) bool {
 }
 
 func plPath() string {
-	dir, _ := os.UserConfigDir()
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		dir = "."
+	}
 	return filepath.Join(dir, "muxplayer", "playlist.txt")
 }
 

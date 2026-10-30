@@ -1,5 +1,7 @@
 package app
 
+// note: input parsing is a pile of small special cases, but it works
+
 import (
 	"fmt"
 	"os"

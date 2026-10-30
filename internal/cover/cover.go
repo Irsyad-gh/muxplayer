@@ -1,5 +1,7 @@
-// Package cover loads artwork through ffmpeg and derives UI colours from it.
+// Package cover grabs artwork with ffmpeg and pulls UI colours out of it.
 package cover
+
+// note: shelling out to ffmpeg is not elegant, but it handles every format we care about
 
 import (
 	"fmt"
@@ -83,7 +85,7 @@ func Size(rw, h int, aspect float64) (pw, ph int) {
 	if maxRows < 4 {
 		return 0, 0
 	}
-	fit := math.Min(float64(rw), float64(maxRows)*aspect)
+	fit := min(float64(rw), float64(maxRows)*aspect)
 	pw = int(math.Round(fit * coverFill))
 	pw -= pw % 2
 	if pw < 8 {

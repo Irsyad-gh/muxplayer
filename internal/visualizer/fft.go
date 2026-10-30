@@ -2,16 +2,15 @@ package visualizer
 
 import "math"
 
-// fft replaces re/im with their discrete Fourier transform. Both slices must
-// have the same power-of-two length. The implementation is a compact iterative
-// radix-2 Cooley-Tukey FFT, so the visualizer has no FFTW/ffmpeg dependency.
+// fft replaces re/im with their DFT in place. Both slices need the same
+// power-of-two length. It's a plain radix-2 Cooley-Tukey, no FFTW needed.
 func fft(re, im []float64) {
 	n := len(re)
 	if n <= 1 {
 		return
 	}
 
-	// Bit-reversal permutation.
+	// Bit-reversal permutation — always takes a minute to read.
 	j := 0
 	for i := 1; i < n; i++ {
 		bit := n >> 1
@@ -25,6 +24,8 @@ func fft(re, im []float64) {
 			im[i], im[j] = im[j], im[i]
 		}
 	}
+
+	// note: this is the 3rd version and we're still not happy
 
 	for length := 2; length <= n; length <<= 1 {
 		angle := -2 * math.Pi / float64(length)

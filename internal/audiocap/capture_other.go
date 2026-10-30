@@ -2,9 +2,10 @@
 
 package audiocap
 
-// open is the fallback for platforms that do not have a native backend yet.
-// A future backend only needs to implement Source and live in a file with the
-// appropriate build tag.
+// note: this is what you get on a platform nobody has ported yet
+
+// open is the fallback for platforms without a backend. A real one just needs
+// to implement Source in a file with the right build tag.
 func open(Options) (Source, error) {
 	return nil, ErrUnsupported
 }

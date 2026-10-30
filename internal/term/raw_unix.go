@@ -2,6 +2,8 @@
 
 package term
 
+// note: raw mode is restored with a defer in the app, losing it wedges the terminal
+
 import (
 	"fmt"
 	"syscall"

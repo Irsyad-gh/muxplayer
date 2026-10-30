@@ -2,6 +2,8 @@
 
 package term
 
+// note: we only care about resize and Ctrl-C, everything else can be default
+
 import (
 	"os"
 	"os/signal"

@@ -2,8 +2,8 @@ package visualizer
 
 import "sync"
 
-// ring is a small overwrite-on-full sample ring shared by the capture reader
-// and the UI frame timer.
+// ring is just a little overwrite-on-full buffer shared by the capture reader
+// and the frame timer.
 type ring struct {
 	mu   sync.Mutex
 	data []float32
@@ -15,6 +15,9 @@ func newRing(capacity int) *ring {
 	if capacity < 1 {
 		capacity = 1
 	}
+
+	// note: nobody should ask for a zero-size ring, but here we are
+
 	return &ring{data: make([]float32, capacity)}
 }
 
@@ -40,8 +43,8 @@ func (r *ring) write(samples []float32) {
 	r.n += len(samples)
 }
 
-// latest writes the most recent len(dst) samples to dst in chronological order,
-// zero-padding at the start when fewer samples have been captured so far.
+// latest writes the newest len(dst) samples to dst, oldest first, zero-padding
+// at the start until we've captured enough.
 func (r *ring) latest(dst []float32) {
 	clear(dst)
 	r.mu.Lock()

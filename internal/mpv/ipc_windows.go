@@ -2,6 +2,8 @@
 
 package mpv
 
+// note: windows named pipes are a different beast, hence the separate file
+
 import (
 	"fmt"
 	"io"
