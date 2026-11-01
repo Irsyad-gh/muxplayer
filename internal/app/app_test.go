@@ -32,6 +32,47 @@ func TestDrawSizes(t *testing.T) {
 			m.scr.rows()
 		}
 	}
+	// Compact mode must tolerate terminals well below the normal minimum.
+	for w := 1; w < 60; w += 3 {
+		for h := 1; h < 18; h += 2 {
+			m.draw(w, h)
+			m.scr.rows()
+		}
+	}
+}
+
+// TestCompactVisualizer checks the too-small layout fills the screen with the
+// spectrum instead of a warning, while keyboard controls keep working.
+func TestCompactVisualizer(t *testing.T) {
+	m := newTestModel()
+	m.play(0)
+	const w, h = 40, 10
+	m.draw(w, h)
+
+	if strings.Contains(strings.Join(m.scr.rows(), "\n"), "terminal too small") {
+		t.Fatal("compact mode still draws the terminal-size warning")
+	}
+	found := false
+	for _, c := range m.scr.c {
+		if strings.ContainsRune(barLevels, c.r) || c.r == '█' {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("compact mode did not draw any visualizer bars")
+	}
+	if m.hList != (rect{}) || m.hBar != (rect{}) {
+		t.Fatalf("compact mode left stale mouse targets: list=%+v bar=%+v", m.hList, m.hBar)
+	}
+
+	before := m.cur
+	if m.onKey("n") {
+		t.Fatal("n should not quit the app")
+	}
+	if m.cur == before {
+		t.Fatalf("keyboard control stopped working in compact mode: cur stayed %d", m.cur)
+	}
 }
 
 // TestVolumeSlider covers the volume bar's geometry and mouse control: a

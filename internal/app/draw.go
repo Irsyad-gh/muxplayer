@@ -34,7 +34,7 @@ type layout struct {
 func (m *model) draw(w, h int) {
 	s := m.resetScreen(w, h)
 	if w < 60 || h < 18 {
-		s.text(1, 1, "terminal too small (min 60x18)", def, def, 0, -1)
+		m.drawCompact(s, w, h)
 		return
 	}
 	m.easeAccent()
@@ -254,17 +254,44 @@ func (m *model) drawVisualizer(s *screen, box layout, acc int32) {
 	}
 }
 
+// drawCompact fills the whole terminal with the spectrum when the window is
+// too small for the normal layout. Keyboard and MPRIS controls stay live.
+func (m *model) drawCompact(s *screen, w, h int) {
+	m.clearHitAreas()
+	m.easeAccent()
+	acc, _ := m.colors()
+	if m.vizOK && h > 0 {
+		m.drawSpectrum(s, 0, w, h-1, h, acc)
+	}
+}
+
+// clearHitAreas drops stale mouse targets so clicks in the compact view do not
+// hit controls left over from the last full-size frame.
+func (m *model) clearHitAreas() {
+	m.hSearch, m.hType, m.hOrder = rect{}, rect{}, rect{}
+	m.hList, m.hBar, m.hVol = rect{}, rect{}, rect{}
+	m.hTab = [2]rect{}
+	m.hBtn = [5]rect{}
+}
+
 func (m *model) drawBars(s *screen, box layout, acc int32) {
-	slots, offset := barSlots(box.lw + 1)
-	if slots == 0 || len(m.bars) == 0 {
+	m.drawSpectrum(s, box.lx, box.lw+1, box.h-2, box.vh, acc)
+}
+
+func (m *model) drawSpectrum(s *screen, x, width, bottom, height int, acc int32) {
+	if width <= 0 || height <= 0 || len(m.bars) == 0 {
+		return
+	}
+	slots, offset := barSlots(width)
+	if slots == 0 {
 		return
 	}
 	for b := 0; b < slots; b++ {
 		lo, hi := mirrorBands(b, slots, len(m.bars))
 		v := barsMax(m.bars, lo, hi)
-		eighths := int(min(1, v) * float64(box.vh*8))
+		eighths := int(min(1, v) * float64(height*8))
 		col := cover.Pack(cover.Mix(m.accent, cover.RGB{255, 255, 255}, v*.45))
-		m.drawBar(s, box, offset+b*barWidth, eighths, col)
+		m.drawBar(s, x+offset+b*barWidth, bottom, height, eighths, col)
 	}
 }
 
@@ -304,14 +331,13 @@ func barsMax(bars []float64, lo, hi int) float64 {
 	return v
 }
 
-func (m *model) drawBar(s *screen, box layout, x, eighths int, col int32) {
-	for r := 0; r < box.vh; r++ {
+func (m *model) drawBar(s *screen, x, bottom, height, eighths int, col int32) {
+	for r := 0; r < height; r++ {
 		ch := barGlyph(eighths - r*8)
 		if ch == 0 {
 			continue
 		}
-		y := box.h - 2 - r
-		s.text(box.lx+x, y, string([]rune{ch, ch}), col, def, 0, -1)
+		s.text(x, bottom-r, string([]rune{ch, ch}), col, def, 0, -1)
 	}
 }
 

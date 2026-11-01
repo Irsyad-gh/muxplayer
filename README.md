@@ -2,12 +2,12 @@
 
 A terminal music player for Linux, macOS, and Windows, written in Go and driven by [mpv](https://mpv.io/). You browse your library, build a queue, and get cover art, an accent colour pulled from the artwork, and a live system-audio visualizer, all inside the terminal. The audio capture and FFT are plain Go, so you don't need cava or any other visualizer process running alongside it.
 
-![Version](https://img.shields.io/badge/version-0.8.3-blue)
+![Version](https://img.shields.io/badge/version-0.8.4-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Current release: `0.8.3`
+Current release: `0.8.4`
 
 > **Caution:** muxplayer is still in development. Expect some bugs and the occasional crash. If you hit one, please [open an issue](https://github.com/Irsyad-gh/muxplayer/issues).
 
@@ -277,6 +277,8 @@ Without a session bus (headless sessions, Windows), playback itself is unaffecte
 
 muxplayer captures system audio itself and draws a mirrored 64-band spectrum under the playlist, with low frequencies in the middle and high frequencies at the edges so both sides stay balanced. The capture readers and the FFT analyser are part of the Go binary. There's no cava process and no generated cava config.
 
+When the terminal is smaller than 60×18, the spectrum takes over the whole window and the normal layout is hidden. Playback keys, volume, seeking, and quitting keep working in this compact view.
+
 - **Linux:** talks to PulseAudio over its native protocol. PipeWire works through its PulseAudio compatibility server (`pipewire-pulse`). muxplayer captures the monitor source of the default output sink.
 - **Windows:** uses WASAPI loopback on the default output device, so there's nothing to set up.
 - **macOS:** native capture isn't implemented yet. Playback works, but the visualizer only shows a short notice. macOS doesn't give ordinary applications access to the output mix unless you use a CoreAudio process tap or a loopback device.
@@ -417,7 +419,6 @@ Changes are saved within a fraction of a second, so even a crash or `SIGKILL` sh
 - Native dependencies, without relying on mpv and ffmpeg
 - macOS CoreAudio process-tap capture for the visualizer
 - Support for other Windows terminals
-- A visualizer-only view for windows smaller than 60×18
 - More customization
 
 ## Contributing
