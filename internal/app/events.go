@@ -13,6 +13,7 @@ func (m *model) handleEvent(e map[string]any) {
 		m.handleProperty(e)
 	case "file-loaded":
 		m.errs = 0
+		m.applyResume()
 	case "end-file":
 		m.handleEndFile(e)
 	}
@@ -24,6 +25,9 @@ func (m *model) handleProperty(e map[string]any) {
 	case "time-pos":
 		if v, ok := d.(float64); ok {
 			m.tpos = v
+			if m.cur >= 0 {
+				m.sessionDirty = true
+			}
 		}
 	case "duration":
 		if v, ok := d.(float64); ok {

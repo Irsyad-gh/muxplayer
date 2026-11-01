@@ -90,6 +90,9 @@ type model struct {
 	dirty          bool      // playlist changed and still needs to be written
 	volDirty       bool      // volume changed and still needs to be written
 	volSaveAt      time.Time // last failed volume save, used to back off
+	sessionDirty   bool      // playback position changed and needs saving
+	sessionSaveAt  time.Time // last session save, used to rate-limit writes
+	resumePos      float64   // saved position waiting for mpv's file-loaded event
 	saveAt         time.Time // last save attempt, used to back off on failure
 	// explorer search and filter
 	query      string

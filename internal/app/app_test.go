@@ -248,6 +248,75 @@ func TestVolumePersists(t *testing.T) {
 	}
 }
 
+// TestSessionPersists checks that the last track and its position are written
+// during playback and restored paused at the same timeline.
+func TestSessionPersists(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("os.UserConfigDir ignores XDG_CONFIG_HOME on macOS")
+	}
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("AppData", dir)
+
+	track := filepath.Join(dir, "song.mp3")
+	if err := os.WriteFile(track, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := newTestModel()
+	m.list = []string{track}
+	m.rebuild()
+	m.play(0)
+	m.tpos = 42.5
+	m.sessionDirty = true
+	m.flushSession()
+
+	st, ok := loadSession()
+	if !ok {
+		t.Fatal("loadSession found no saved session")
+	}
+	if st.Track != track || st.Pos != 42.5 {
+		t.Fatalf("saved session = %+v, want %s at 42.5", st, track)
+	}
+
+	m2 := newTestModel()
+	m2.list = []string{track}
+	m2.rebuild()
+	if !m2.restoreSession() {
+		t.Fatal("restoreSession did not restore an existing track")
+	}
+	if m2.cur != 0 || m2.tpos != 42.5 || !m2.paused {
+		t.Fatalf("restored state: cur=%d tpos=%v paused=%v, want 0, 42.5, true", m2.cur, m2.tpos, m2.paused)
+	}
+	if m2.resumePos != 42.5 {
+		t.Fatalf("pending resume position = %v, want 42.5", m2.resumePos)
+	}
+	m2.handleEvent(map[string]any{"event": "file-loaded"})
+	if m2.resumePos != 0 {
+		t.Fatalf("file-loaded left a pending resume position: %v", m2.resumePos)
+	}
+
+	// A track deleted since the last run must not be restored.
+	if err := os.Remove(track); err != nil {
+		t.Fatal(err)
+	}
+	if m2.restoreSession() {
+		t.Fatal("restoreSession restored a track that no longer exists")
+	}
+}
+
+// TestSessionTracksPositionChanges makes sure ordinary time-pos events schedule
+// a save, while a track change is saved even before playback starts.
+func TestSessionTracksPositionChanges(t *testing.T) {
+	m := newTestModel()
+	m.play(0)
+	m.sessionDirty = false
+	m.handleProperty(map[string]any{"name": "time-pos", "data": float64(12.25)})
+	if m.tpos != 12.25 || !m.sessionDirty {
+		t.Fatalf("time-pos did not update the session: tpos=%v dirty=%v", m.tpos, m.sessionDirty)
+	}
+}
+
 // TestWriteFileAtomic checks that saving replaces the playlist in one step and
 // leaves no temp files behind.
 func TestWriteFileAtomic(t *testing.T) {

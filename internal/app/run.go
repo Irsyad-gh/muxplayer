@@ -27,7 +27,7 @@ func Run(p *mpv.Player, dir, track string) {
 	m.load(dir)
 	if track != "" {
 		m.play(m.add(track))
-	} else if len(m.list) == 0 {
+	} else if !m.restoreSession() && len(m.list) == 0 {
 		m.tab = 1
 	}
 	diag.Debugf("app: starting in %s (%d tracks in playlist)", dir, len(m.list))
@@ -140,6 +140,7 @@ func run(m *model, mpr *mpris.Server) {
 			// an unclean exit cannot lose them.
 			m.flushPlaylist()
 			m.flushVolume()
+			m.flushSession()
 			mpr.Update(m.snapshot())
 			v.render(m)
 		}
@@ -153,6 +154,11 @@ func shutdown(m *model, mpr *mpris.Server, viz *visualizer.Visualizer, restore f
 	m.savePlaylist()
 	if m.volDirty {
 		m.saveVolume() // ignore error, shutdown is best effort
+	}
+	if m.cur >= 0 {
+		if err := m.saveSession(); err != nil {
+			diag.Warnf("%v", err)
+		}
 	}
 	m.mp.Close()
 	mpr.Close()

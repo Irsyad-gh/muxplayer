@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"muxplayer/internal/cover"
 	"muxplayer/internal/diag"
@@ -89,18 +90,26 @@ func (m *model) moveToFront(idx int) {
 
 // playAt starts idx without touching the bag, so automatic advances keep
 // walking the current order.
-func (m *model) playAt(idx int) {
+func (m *model) playAt(idx int) { m.startAt(idx, false) }
+
+// startAt loads idx and optionally leaves it paused. Resuming the saved
+// session uses paused playback so reopening the app stays quiet.
+func (m *model) startAt(idx int, paused bool) {
 	if idx < 0 || idx >= len(m.list) {
 		return
 	}
 	diag.Debugf("player: track %d/%d %s", idx+1, len(m.list), m.list[idx])
 	m.cur, m.played, m.tpos, m.meta = idx, 1, 0, nil
+	m.resumePos = 0
 	if i := slices.Index(m.order, idx); i >= 0 {
 		m.pos = i
 	}
 	m.mp.Do("loadfile", m.list[idx], "replace")
-	m.mp.Do("set_property", "pause", false)
+	m.mp.Do("set_property", "pause", paused)
+	m.paused = paused
 	m.target = cover.Lift(cover.Hash(m.list[idx]))
+	m.sessionDirty = true
+	m.sessionSaveAt = time.Time{}
 }
 
 // step moves forward/backward. auto means a track ended and repeat rules apply.
