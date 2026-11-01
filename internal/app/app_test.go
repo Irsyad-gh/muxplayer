@@ -210,6 +210,44 @@ func TestStartTrackPlaysFile(t *testing.T) {
 	}
 }
 
+// TestVolumePersists checks that volume changes are written on the tick, so
+// they survive an abrupt exit as well as a clean shutdown.
+func TestVolumePersists(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("os.UserConfigDir ignores XDG_CONFIG_HOME on macOS")
+	}
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("AppData", dir)
+
+	m := newTestModel()
+	m.handleProperty(map[string]any{"name": "volume", "data": float64(42)})
+	if !m.volDirty {
+		t.Fatal("a volume change did not mark the volume dirty")
+	}
+	m.flushVolume()
+
+	b, err := os.ReadFile(filepath.Join(dir, "muxplayer", "volume.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(string(b)); got != "42" {
+		t.Fatalf("saved volume = %q, want 42", got)
+	}
+	if m.volDirty {
+		t.Fatal("flushVolume left the volume dirty after a successful save")
+	}
+	if v, ok := loadVolume(); !ok || v != 42 {
+		t.Fatalf("loadVolume = %v, %v; want 42, true", v, ok)
+	}
+
+	// An unchanged property event must not schedule pointless writes.
+	m.handleProperty(map[string]any{"name": "volume", "data": float64(42)})
+	if m.volDirty {
+		t.Fatal("an unchanged volume should not mark the volume dirty")
+	}
+}
+
 // TestWriteFileAtomic checks that saving replaces the playlist in one step and
 // leaves no temp files behind.
 func TestWriteFileAtomic(t *testing.T) {

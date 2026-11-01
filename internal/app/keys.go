@@ -32,6 +32,7 @@ func (m *model) stop() {
 // setVolume applies an absolute volume, clamped to the slider's 0–100 range.
 func (m *model) setVolume(v float64) {
 	m.vol = min(100, max(0, v))
+	m.volDirty = true
 	m.mp.Do("set_property", "volume", m.vol)
 }
 

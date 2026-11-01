@@ -136,9 +136,10 @@ func run(m *model, mpr *mpris.Server) {
 			}
 			v.invalidate()
 		case <-tick.C:
-			// Persist playlist changes as they happen so a crash or an
-			// unclean exit cannot lose them.
+			// Persist playlist and volume changes as they happen so a crash or
+			// an unclean exit cannot lose them.
 			m.flushPlaylist()
+			m.flushVolume()
 			mpr.Update(m.snapshot())
 			v.render(m)
 		}
@@ -150,6 +151,9 @@ func shutdown(m *model, mpr *mpris.Server, viz *visualizer.Visualizer, restore f
 	diag.Debugf("app: shutting down")
 	restore()
 	m.savePlaylist()
+	if m.volDirty {
+		m.saveVolume() // ignore error, shutdown is best effort
+	}
 	m.mp.Close()
 	mpr.Close()
 	viz.Close()
@@ -189,6 +193,36 @@ func (m *model) savePlaylist() {
 		return
 	}
 	m.dirty = false
+}
+
+// flushVolume writes the current volume whenever it changed. Like the
+// playlist, it is persisted during normal use, not only on a clean shutdown,
+// so an abrupt exit keeps the latest value.
+func (m *model) flushVolume() {
+	if !m.volDirty {
+		return
+	}
+	if !m.volSaveAt.IsZero() && time.Since(m.volSaveAt) < time.Second {
+		return
+	}
+	if err := m.saveVolume(); err != nil {
+		m.volSaveAt = time.Now()
+		return
+	}
+	m.volSaveAt = time.Time{}
+}
+
+func (m *model) saveVolume() error {
+	path := volPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create config dir: %w", err)
+	}
+	data := []byte(fmt.Sprintf("%g", m.vol))
+	if err := writeFileAtomic(path, data, 0o644); err != nil {
+		return fmt.Errorf("save volume: %w", err)
+	}
+	m.volDirty = false
+	return nil
 }
 
 // writeFileAtomic replaces path with data in one step. The temp file lives in

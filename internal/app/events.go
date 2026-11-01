@@ -34,8 +34,9 @@ func (m *model) handleProperty(e map[string]any) {
 			m.paused = v
 		}
 	case "volume":
-		if v, ok := d.(float64); ok {
+		if v, ok := d.(float64); ok && v != m.vol {
 			m.vol = v
+			m.volDirty = true
 		}
 	case "metadata":
 		if v, ok := d.(map[string]any); ok {

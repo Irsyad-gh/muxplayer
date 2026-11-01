@@ -88,6 +88,8 @@ type model struct {
 	volDrag        bool
 	errs           int
 	dirty          bool      // playlist changed and still needs to be written
+	volDirty       bool      // volume changed and still needs to be written
+	volSaveAt      time.Time // last failed volume save, used to back off
 	saveAt         time.Time // last save attempt, used to back off on failure
 	// explorer search and filter
 	query      string
@@ -138,12 +140,30 @@ func exists(p string) bool {
 	return err == nil
 }
 
-func plPath() string {
+func plPath() string { return configPath("playlist.txt") }
+
+func volPath() string { return configPath("volume.txt") }
+
+func configPath(name string) string {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		dir = "."
 	}
-	return filepath.Join(dir, "muxplayer", "playlist.txt")
+	return filepath.Join(dir, "muxplayer", name)
+}
+
+// loadVolume reads the saved volume. A missing or malformed file is not an
+// error; the caller keeps its default.
+func loadVolume() (float64, bool) {
+	b, err := os.ReadFile(volPath())
+	if err != nil {
+		return 0, false
+	}
+	v, err := strconv.ParseFloat(strings.TrimSpace(string(b)), 64)
+	if err != nil || math.IsNaN(v) || math.IsInf(v, 0) || v < 0 {
+		return 0, false
+	}
+	return min(130, v), true
 }
 
 // envCellAspect reads MUXPLAYER_CELL_ASPECT (cell height / width) so the cover
@@ -166,6 +186,10 @@ func newModel(mp *mpv.Player) *model {
 		accent: cover.RGB{200, 208, 220}, target: cover.RGB{200, 208, 220},
 		coverCh: make(chan coverRes, 2), lastRow: -1,
 		aspectOverride: envCellAspect(),
+	}
+	if v, ok := loadVolume(); ok {
+		m.vol = v
+		m.mp.Do("set_property", "volume", v)
 	}
 	m.loadPlaylist()
 	m.rebuild()
