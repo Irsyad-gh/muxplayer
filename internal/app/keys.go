@@ -90,9 +90,9 @@ func (m *model) onKey(k string) bool {
 	case "right":
 		m.mp.Do("seek", 5, "relative")
 	case "+", "=":
-		m.mp.Do("add", "volume", 5)
+		m.mp.Do("add", "volume", 1)
 	case "-", "_":
-		m.mp.Do("add", "volume", -5)
+		m.mp.Do("add", "volume", -1)
 	case "backspace":
 		m.goUpDir()
 	case "a":
