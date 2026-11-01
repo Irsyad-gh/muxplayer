@@ -29,6 +29,12 @@ func (m *model) stop() {
 	m.cur, m.tpos, m.meta = -1, 0, nil
 }
 
+// setVolume applies an absolute volume, clamped to the slider's 0–100 range.
+func (m *model) setVolume(v float64) {
+	m.vol = min(100, max(0, v))
+	m.mp.Do("set_property", "volume", m.vol)
+}
+
 func (m *model) cycleShuffle() {
 	m.shuffle = (m.shuffle + 1) % 3
 	diag.Debugf("mode: shuffle %d", m.shuffle)

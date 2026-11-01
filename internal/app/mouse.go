@@ -2,16 +2,21 @@ package app
 
 // note: mouse handling is best effort, terminal reporting varies too much
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 func (m *model) onMouse(in input) {
 	switch {
 	case in.btn == 64 || in.btn == 65:
 		m.onWheel(in)
+	case in.btn == 32 && m.volDrag:
+		m.volAt(in.mx)
 	case in.btn == 32 && m.drag:
 		m.seekFrac(in.mx)
 	case in.btn == 0 && !in.press:
-		m.drag = false
+		m.drag, m.volDrag = false, false
 	case in.btn == 0 && in.press:
 		m.onClick(in.mx, in.my)
 	}
@@ -83,6 +88,19 @@ func (m *model) clickBar(x, y int) {
 		m.drag = true
 		m.seekFrac(x)
 	}
+	if m.hVol.in(x, y) {
+		m.volDrag = true
+		m.volAt(x)
+	}
+}
+
+// volAt maps a point on the volume slider to a percentage.
+func (m *model) volAt(x int) {
+	if m.hVol.w <= 1 {
+		return
+	}
+	f := float64(x-m.hVol.x) / float64(m.hVol.w-1)
+	m.setVolume(math.Round(f * 100))
 }
 
 func (m *model) clickButton(x, y int) {

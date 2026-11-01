@@ -34,6 +34,44 @@ func TestDrawSizes(t *testing.T) {
 	}
 }
 
+// TestVolumeSlider covers the volume bar's geometry and mouse control: a
+// click or drag maps the pointer position to an absolute mpv volume.
+func TestVolumeSlider(t *testing.T) {
+	m := newTestModel()
+	m.vol = 50
+	const w, h = 100, 30
+	m.draw(w, h)
+
+	box := m.layout(w, h)
+	if m.hVol.w < 3 {
+		t.Fatalf("volume slider is too narrow: %d", m.hVol.w)
+	}
+	if m.hVol.x < box.rx || m.hVol.x+m.hVol.w > box.rx+box.rw {
+		t.Fatalf("volume slider %+v is outside the player panel", m.hVol)
+	}
+
+	click := func(x int) {
+		m.onMouse(input{mouse: true, btn: 0, press: true, mx: x, my: m.hVol.y})
+	}
+	click(m.hVol.x)
+	if m.vol != 0 {
+		t.Fatalf("left edge set volume to %v, want 0", m.vol)
+	}
+	click(m.hVol.x + m.hVol.w - 1)
+	if m.vol != 100 {
+		t.Fatalf("right edge set volume to %v, want 100", m.vol)
+	}
+
+	m.onMouse(input{mouse: true, btn: 32, mx: m.hVol.x + (m.hVol.w-1)/2, my: m.hVol.y})
+	if m.vol < 45 || m.vol > 55 {
+		t.Fatalf("middle drag set volume to %v, want about 50", m.vol)
+	}
+	m.onMouse(input{mouse: true, btn: 0, press: false, my: m.hVol.y})
+	if m.volDrag {
+		t.Fatal("releasing the mouse should end the volume drag")
+	}
+}
+
 func TestVisualizerBarsAreMirrored(t *testing.T) {
 	m := newTestModel()
 	m.bars = make([]float64, 64)

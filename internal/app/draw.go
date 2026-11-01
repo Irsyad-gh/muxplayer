@@ -330,7 +330,35 @@ func (m *model) drawPlayer(s *screen, box layout, acc int32, ty int) {
 	by := ty + 2
 	m.drawProgress(s, box, acc, by)
 	m.drawButtons(s, box, acc, by+3)
-	s.ctr(box.rx, box.rw, by+5, fmt.Sprintf("vol %d%%", int(m.vol)), def, def, aDim)
+	m.drawVolume(s, box, acc, by+5)
+}
+
+// drawVolume paints the app's own volume slider below the transport buttons.
+// The label and percentage stay on the same row so the player block keeps a
+// fixed height in short terminals.
+func (m *model) drawVolume(s *screen, box layout, acc int32, y int) {
+	m.hVol = rect{}
+	label, pct := "vol", fmt.Sprintf("%d%%", int(m.vol))
+	trackW := box.rw - utf8.RuneCountInString(label) - utf8.RuneCountInString(pct) - 2
+	if trackW < 3 {
+		s.ctr(box.rx, box.rw, y, label+" "+pct, def, def, aDim)
+		return
+	}
+	s.text(box.rx, y, label, def, def, aDim, -1)
+	x := box.rx + utf8.RuneCountInString(label) + 1
+	pos := int(min(1, max(0, m.vol)/100) * float64(trackW-1))
+	for i := 0; i < trackW; i++ {
+		ch, col, at := "━", def, aDim
+		switch {
+		case i == pos:
+			ch, at = "●", aBold
+		case i < pos:
+			ch, col, at = "━", acc, 0
+		}
+		s.text(x+i, y, ch, col, def, at, 1)
+	}
+	s.text(x+trackW+1, y, pct, def, def, aDim, -1)
+	m.hVol = rect{x, y, trackW, 1}
 }
 
 func (m *model) nowTitle() string {

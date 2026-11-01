@@ -85,6 +85,7 @@ type model struct {
 	lastClk        time.Time
 	lastRow        int
 	drag           bool
+	volDrag        bool
 	errs           int
 	dirty          bool      // playlist changed and still needs to be written
 	saveAt         time.Time // last save attempt, used to back off on failure
@@ -102,6 +103,7 @@ type model struct {
 	// hit areas
 	hTab        [2]rect
 	hList, hBar rect
+	hVol        rect
 	hBtn        [5]rect
 	rightX      int
 	listY       int
