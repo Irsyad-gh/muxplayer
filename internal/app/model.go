@@ -94,6 +94,8 @@ type model struct {
 	dirty          bool      // playlist changed and still needs to be written
 	volDirty       bool      // volume changed and still needs to be written
 	volSaveAt      time.Time // last failed volume save, used to back off
+	modesDirty     bool      // shuffle/repeat changed and needs saving
+	modesSaveAt    time.Time // last failed mode save, used to back off
 	sessionDirty   bool      // playback position changed and needs saving
 	sessionSaveAt  time.Time // last session save, used to rate-limit writes
 	resumePos      float64   // saved position waiting for mpv's file-loaded event
@@ -197,6 +199,9 @@ func newModel(mp *mpv.Player) *model {
 	if v, ok := loadVolume(); ok {
 		m.vol = v
 		m.mp.Do("set_property", "volume", v)
+	}
+	if st, ok := loadModes(); ok {
+		m.shuffle, m.repeat, m.times = st.Shuffle, st.Repeat, st.Times
 	}
 	m.loadPlaylist()
 	m.rebuild()

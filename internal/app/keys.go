@@ -38,12 +38,14 @@ func (m *model) setVolume(v float64) {
 
 func (m *model) cycleShuffle() {
 	m.shuffle = (m.shuffle + 1) % 3
+	m.modesDirty = true
 	diag.Debugf("mode: shuffle %d", m.shuffle)
 	m.rebuild()
 }
 
 func (m *model) cycleRepeat() {
 	m.repeat, m.played = (m.repeat+1)%4, 1
+	m.modesDirty = true
 	diag.Debugf("mode: repeat %d", m.repeat)
 }
 
@@ -84,8 +86,10 @@ func (m *model) onKey(k string) bool {
 		m.cycleRepeat()
 	case "[":
 		m.times = max(2, m.times-1)
+		m.modesDirty = true
 	case "]":
 		m.times = min(99, m.times+1)
+		m.modesDirty = true
 	case "left":
 		m.mp.Do("seek", -5, "relative")
 	case "right":

@@ -140,6 +140,7 @@ func run(m *model, mpr *mpris.Server) {
 			// an unclean exit cannot lose them.
 			m.flushPlaylist()
 			m.flushVolume()
+			m.flushModes()
 			m.flushSession()
 			mpr.Update(m.snapshot())
 			v.render(m)
@@ -154,6 +155,9 @@ func shutdown(m *model, mpr *mpris.Server, viz *visualizer.Visualizer, restore f
 	m.savePlaylist()
 	if m.volDirty {
 		m.saveVolume() // ignore error, shutdown is best effort
+	}
+	if m.modesDirty {
+		m.saveModes() // ignore error, shutdown is best effort
 	}
 	if m.cur >= 0 {
 		if err := m.saveSession(); err != nil {

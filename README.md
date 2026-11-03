@@ -2,12 +2,12 @@
 
 A terminal music player for Linux, macOS, and Windows, written in Go and driven by [mpv](https://mpv.io/). You browse your library, build a queue, and get cover art, an accent colour pulled from the artwork, and a live system-audio visualizer, all inside the terminal. The audio capture and FFT are plain Go, so you don't need cava or any other visualizer process running alongside it.
 
-![Version](https://img.shields.io/badge/version-0.8.5-blue)
+![Version](https://img.shields.io/badge/version-0.8.7-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Current release: `0.8.6`
+Current release: `0.8.7`
 
 > **Caution:** muxplayer is still in development. Expect some bugs and the occasional crash. If you hit one, please [open an issue](https://github.com/Irsyad-gh/muxplayer/issues).
 
@@ -242,6 +242,8 @@ Repeat modes:
 | `one` | Repeats the current track |
 | `N×` | Repeats the current track N times, then moves on |
 
+The shuffle mode, loop mode, and N× count are saved and restored on the next launch.
+
 ### Mouse
 
 | Action | Result |
@@ -303,10 +305,11 @@ There's no config file. muxplayer only creates a few files at runtime:
 | `$XDG_CONFIG_HOME/muxplayer/playlist.txt` | Saved playlist (defaults to `~/.config/muxplayer/playlist.txt`) |
 | `$XDG_CONFIG_HOME/muxplayer/volume.txt` | Saved volume (defaults to `~/.config/muxplayer/volume.txt`) |
 | `$XDG_CONFIG_HOME/muxplayer/session.json` | Last track and playback position (defaults to `~/.config/muxplayer/session.json`) |
+| `$XDG_CONFIG_HOME/muxplayer/modes.json` | Saved shuffle, loop, and N× repeat mode (defaults to `~/.config/muxplayer/modes.json`) |
 | `$XDG_CACHE_HOME/muxplayer/art/` | Artwork extracted for MPRIS controllers |
 | `muxplayer-<pid>.sock` in the temp dir (Unix), `\\.\pipe\muxplayer-<pid>` (Windows) | mpv JSON IPC endpoint |
 
-When the playlist is restored, only tracks that still exist are kept. It's written shortly after every change, so a crash, a `SIGKILL`, or a power cut won't lose it. Each save goes to a temporary file that is then atomically renamed over the old one, so an interrupted save leaves the previous playlist intact rather than a truncated file. The volume and playback session are saved the same way, so they survive both a clean exit and an abrupt one.
+When the playlist is restored, only tracks that still exist are kept. It's written shortly after every change, so a crash, a `SIGKILL`, or a power cut won't lose it. Each save goes to a temporary file that is then atomically renamed over the old one, so an interrupted save leaves the previous playlist intact rather than a truncated file. The volume, shuffle/repeat modes, and playback session are saved the same way, so they survive both a clean exit and an abrupt one.
 
 | Environment variable | Description |
 | --- | --- |

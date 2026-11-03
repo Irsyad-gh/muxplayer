@@ -91,6 +91,7 @@ func (m *model) action(a mpris.Action) bool {
 			if b {
 				m.shuffle = shuffleBag
 			}
+			m.modesDirty = true
 			m.rebuild()
 		}
 	case mpris.ActOpen:
@@ -112,6 +113,7 @@ func (m *model) setLoop(arg any) {
 	default:
 		m.repeat, m.played = repeatOff, 1
 	}
+	m.modesDirty = true
 }
 
 func (m *model) openURI(arg any) {

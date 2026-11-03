@@ -370,6 +370,50 @@ func TestSessionTracksPositionChanges(t *testing.T) {
 	}
 }
 
+// TestModesPersist checks that shuffle, repeat, and the N× count are written
+// and restored, including after an abrupt exit.
+func TestModesPersist(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("os.UserConfigDir ignores XDG_CONFIG_HOME on macOS")
+	}
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("AppData", dir)
+
+	m := newTestModel()
+	m.onKey("s") // shuffle bag
+	m.onKey("r") // repeat all
+	m.onKey("]") // N× count 4
+	m.flushModes()
+
+	st, ok := loadModes()
+	if !ok {
+		t.Fatal("loadModes found no saved modes")
+	}
+	if st.Shuffle != shuffleBag || st.Repeat != repeatAll || st.Times != 4 {
+		t.Fatalf("saved modes = %+v, want shuffle=%d repeat=%d times=4", st, shuffleBag, repeatAll)
+	}
+
+	m2 := newModel(nil)
+	if m2.shuffle != shuffleBag || m2.repeat != repeatAll || m2.times != 4 {
+		t.Fatalf("restored modes = %d/%d/%d, want %d/%d/4",
+			m2.shuffle, m2.repeat, m2.times, shuffleBag, repeatAll)
+	}
+}
+
+// TestModeChangesMarkDirty keeps persistence independent of shutdown: every
+// keyboard mode change must schedule a save on the next tick.
+func TestModeChangesMarkDirty(t *testing.T) {
+	m := newTestModel()
+	for _, key := range []string{"s", "r", "]", "["} {
+		m.modesDirty = false
+		m.onKey(key)
+		if !m.modesDirty {
+			t.Fatalf("key %q did not mark the modes dirty", key)
+		}
+	}
+}
+
 // TestWriteFileAtomic checks that saving replaces the playlist in one step and
 // leaves no temp files behind.
 func TestWriteFileAtomic(t *testing.T) {
