@@ -107,7 +107,6 @@ func (m *model) startAt(idx int, paused bool) {
 	m.mp.Do("loadfile", m.list[idx], "replace")
 	m.mp.Do("set_property", "pause", paused)
 	m.paused = paused
-	m.target = cover.Lift(cover.Hash(m.list[idx]))
 	m.sessionDirty = true
 	m.sessionSaveAt = time.Time{}
 }

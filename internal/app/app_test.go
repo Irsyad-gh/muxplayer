@@ -113,6 +113,18 @@ func TestVolumeSlider(t *testing.T) {
 	}
 }
 
+// TestNoCoverUsesDefaultAccent checks that a track without embedded or sibling
+// artwork falls back to the neutral accent rather than a path-based colour.
+func TestNoCoverUsesDefaultAccent(t *testing.T) {
+	m := newTestModel()
+	m.coverKey = "track"
+	m.target = cover.RGB{10, 20, 30}
+	m.handleCover(coverRes{key: m.coverKey})
+	if m.target != defaultAccent {
+		t.Fatalf("target = %v, want default accent %v", m.target, defaultAccent)
+	}
+}
+
 func TestVisualizerBarsAreMirrored(t *testing.T) {
 	m := newTestModel()
 	m.bars = make([]float64, 64)

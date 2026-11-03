@@ -34,6 +34,10 @@ const (
 	orderZA
 )
 
+// defaultAccent is the neutral colour used with no track and for tracks that
+// have no embedded or sibling artwork.
+var defaultAccent = cover.RGB{200, 208, 220}
+
 type rect struct{ x, y, w, h int }
 
 func (r rect) in(x, y int) bool {
@@ -186,7 +190,7 @@ func envCellAspect() float64 {
 func newModel(mp *mpv.Player) *model {
 	m := &model{
 		mp: mp, cur: -1, times: 3, vol: 100,
-		accent: cover.RGB{200, 208, 220}, target: cover.RGB{200, 208, 220},
+		accent: defaultAccent, target: defaultAccent,
 		coverCh: make(chan coverRes, 2), lastRow: -1,
 		aspectOverride: envCellAspect(),
 	}

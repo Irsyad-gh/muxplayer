@@ -43,7 +43,7 @@ func (m *model) blitCover(s *screen, cx, cw, ch, pw int, acc, onAcc int32) {
 		}
 	}
 	if !ready {
-		s.ctr(cx, cw, 1+ch/2, "music cover", onAcc, acc, 0)
+		s.ctr(cx, cw, 1+ch/2, "", onAcc, acc, 0)
 	}
 }
 

@@ -5,7 +5,6 @@ package cover
 
 import (
 	"fmt"
-	"hash/fnv"
 	"math"
 	"os"
 	"os/exec"
@@ -33,29 +32,6 @@ func Lift(c RGB) RGB {
 		return c
 	}
 	return Mix(c, RGB{255, 255, 255}, (120-l)/120*.85)
-}
-
-func Hash(s string) RGB {
-	h := fnv.New32a()
-	h.Write([]byte(s))
-	hue := float64(h.Sum32()%360) / 60
-	x := 1 - math.Abs(math.Mod(hue, 2)-1)
-	r, g, b := 0.0, 0.0, 0.0
-	switch int(hue) {
-	case 0:
-		r, g = 1, x
-	case 1:
-		r, g = x, 1
-	case 2:
-		g, b = 1, x
-	case 3:
-		g, b = x, 1
-	case 4:
-		r, b = x, 1
-	default:
-		r, b = 1, x
-	}
-	return Mix(RGB{r * 255, g * 255, b * 255}, RGB{255, 255, 255}, .25)
 }
 
 var audioExt = map[string]bool{

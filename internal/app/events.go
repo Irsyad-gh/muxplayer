@@ -70,6 +70,7 @@ func (m *model) handleCover(res coverRes) {
 		m.target = cover.Lift(cover.AvgColor(res.pix))
 		diag.Debugf("cover: loaded %s", res.key)
 	} else {
-		diag.Debugf("cover: none for %s", res.key)
+		m.target = defaultAccent
+		diag.Debugf("cover: none for %s, using default accent", res.key)
 	}
 }

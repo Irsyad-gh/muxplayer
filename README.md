@@ -2,12 +2,12 @@
 
 A terminal music player for Linux, macOS, and Windows, written in Go and driven by [mpv](https://mpv.io/). You browse your library, build a queue, and get cover art, an accent colour pulled from the artwork, and a live system-audio visualizer, all inside the terminal. The audio capture and FFT are plain Go, so you don't need cava or any other visualizer process running alongside it.
 
-![Version](https://img.shields.io/badge/version-0.8.4-blue)
+![Version](https://img.shields.io/badge/version-0.8.5-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Current release: `0.8.4`
+Current release: `0.8.6`
 
 > **Caution:** muxplayer is still in development. Expect some bugs and the occasional crash. If you hit one, please [open an issue](https://github.com/Irsyad-gh/muxplayer/issues).
 
@@ -265,7 +265,7 @@ muxplayer first asks ffmpeg to pull out any artwork embedded in the audio file. 
 cover.jpg  folder.jpg  cover.png  folder.png  front.jpg
 ```
 
-The artwork is cropped to a square from the centre and drawn with truecolour half-blocks. To keep it from looking stretched, muxplayer reads your terminal's cell pixel size. A cell is usually twice as tall as it is wide, so the image is pre-scaled by the inverse of that ratio. The cover's average colour becomes the interface accent. Tracks with no art get a colour derived deterministically from their path.
+The artwork is cropped to a square from the centre and drawn with truecolour half-blocks. To keep it from looking stretched, muxplayer reads your terminal's cell pixel size. A cell is usually twice as tall as it is wide, so the image is pre-scaled by the inverse of that ratio. The cover's average colour becomes the interface accent. Tracks with no artwork use the same neutral accent as the empty player.
 
 ## Desktop integration (MPRIS)
 
