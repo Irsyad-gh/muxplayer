@@ -63,6 +63,7 @@ type coverRes struct {
 type model struct {
 	scr            *screen
 	mp             *mpv.Player
+	version        string
 	tab            int
 	list           []string
 	cur, pos       int
@@ -189,9 +190,9 @@ func envCellAspect() float64 {
 	return f
 }
 
-func newModel(mp *mpv.Player) *model {
+func newModel(mp *mpv.Player, version string) *model {
 	m := &model{
-		mp: mp, cur: -1, times: 3, vol: 100,
+		mp: mp, version: version, cur: -1, times: 3, vol: 100,
 		accent: defaultAccent, target: defaultAccent,
 		coverCh: make(chan coverRes, 2), lastRow: -1,
 		aspectOverride: envCellAspect(),

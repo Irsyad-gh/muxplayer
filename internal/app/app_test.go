@@ -41,6 +41,22 @@ func TestDrawSizes(t *testing.T) {
 	}
 }
 
+// TestVersionLabel checks the branding sits in the top-right corner.
+func TestVersionLabel(t *testing.T) {
+	m := newTestModel()
+	m.version = "9.9.9"
+	const w, h = 100, 30
+	m.draw(w, h)
+
+	label := "muxplayer v9.9.9"
+	x := w - len(label) - 1
+	for i, r := range label {
+		if got := m.scr.c[x+i].r; got != r {
+			t.Fatalf("version label cell %d = %q, want %q", i, got, r)
+		}
+	}
+}
+
 // TestCompactVisualizer checks the too-small layout fills the screen with the
 // spectrum instead of a warning, while keyboard controls keep working.
 func TestCompactVisualizer(t *testing.T) {
@@ -394,7 +410,7 @@ func TestModesPersist(t *testing.T) {
 		t.Fatalf("saved modes = %+v, want shuffle=%d repeat=%d times=4", st, shuffleBag, repeatAll)
 	}
 
-	m2 := newModel(nil)
+	m2 := newModel(nil, "")
 	if m2.shuffle != shuffleBag || m2.repeat != repeatAll || m2.times != 4 {
 		t.Fatalf("restored modes = %d/%d/%d, want %d/%d/4",
 			m2.shuffle, m2.repeat, m2.times, shuffleBag, repeatAll)

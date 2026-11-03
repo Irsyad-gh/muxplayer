@@ -2,12 +2,12 @@
 
 A terminal music player for Linux, macOS, and Windows, written in Go and driven by [mpv](https://mpv.io/). You browse your library, build a queue, and get cover art, an accent colour pulled from the artwork, and a live system-audio visualizer, all inside the terminal. The audio capture and FFT are plain Go, so you don't need cava or any other visualizer process running alongside it.
 
-![Version](https://img.shields.io/badge/version-0.8.8-blue)
+![Version](https://img.shields.io/badge/version-0.8.9-blue)
 ![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Current release: `0.8.8`
+Current release: `0.8.9`
 
 > **Caution:** muxplayer is still in development. Expect some bugs and the occasional crash. If you hit one, please [open an issue](https://github.com/Irsyad-gh/muxplayer/issues).
 

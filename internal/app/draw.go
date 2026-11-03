@@ -40,6 +40,7 @@ func (m *model) draw(w, h int) {
 	m.easeAccent()
 	acc, onAcc := m.colors()
 	box := m.layout(w, h)
+	m.drawVersion(s, w)
 	m.drawTabs(s, box, acc, onAcc)
 	m.drawSearch(s, box, acc, onAcc)
 	m.drawList(s, box, acc, onAcc)
@@ -90,6 +91,15 @@ func (m *model) layout(w, h int) layout {
 		w: w, h: h, lx: lx, ly: ly, lw: lw, rx: rx, rw: rw,
 		sepY: sepY, vh: vh, listH: sepY - ly - 1,
 	}
+}
+
+func (m *model) drawVersion(s *screen, w int) {
+	if m.version == "" {
+		return
+	}
+	label := "muxplayer v" + m.version
+	x := max(0, w-utf8.RuneCountInString(label)-1)
+	s.text(x, 0, label, def, def, aDim, -1)
 }
 
 func (m *model) drawTabs(s *screen, box layout, acc, onAcc int32) {

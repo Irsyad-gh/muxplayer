@@ -22,8 +22,8 @@ import (
 
 // Run opens dir and runs the TUI until the user quits. A non-empty track is
 // added to the playlist and starts playing immediately.
-func Run(p *mpv.Player, dir, track string) {
-	m := newModel(p)
+func Run(p *mpv.Player, dir, track, version string) {
+	m := newModel(p, version)
 	m.load(dir)
 	if track != "" {
 		m.play(m.add(track))
