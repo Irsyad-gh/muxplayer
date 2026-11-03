@@ -16,8 +16,8 @@ const (
 )
 
 const helpText = " Tab:panel  Enter:play  Space:pause  n/p:track  " +
-	"s:shuffle  r:repeat  [ ]:N×  ←→:seek  +/-:vol  " +
-	"a:add  d:delete  q:quit"
+	"s:shuffle  r:repeat  [ ]:N×  ←→:seek 1s  ctrl+←→:5s  " +
+	"+/-:vol 1  ctrl+±:5  a:add  d:delete  q:quit"
 
 const helpExplorer = " Tab:panel  Enter:open  Bksp:up  /:search  t:type  o:order  " +
 	"a:add  Space:pause  n/p:track  q:quit"

@@ -4,8 +4,10 @@ package term
 // note: escape sequences are hard-coded; terminfo can wait
 
 const (
-	enterScreen = "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1002h\x1b[?1006h\x1b[2J"
-	leaveScreen = "\x1b[?1006l\x1b[?1002l\x1b[?1000l\x1b[?25h\x1b[?1049l"
+	// modifyOtherKeys level 1 makes combos such as Ctrl++ send a CSI sequence
+	// instead of being silently merged into an unrelated control character.
+	enterScreen = "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1002h\x1b[?1006h\x1b[>4;1m\x1b[2J"
+	leaveScreen = "\x1b[?1006l\x1b[?1002l\x1b[?1000l\x1b[?25h\x1b[>4;0m\x1b[?1049l"
 
 	// MinAspect and MaxAspect bound plausible cell height/width ratios;
 	// DefaultAspect is used when the terminal reports no pixel size.

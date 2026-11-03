@@ -91,13 +91,21 @@ func (m *model) onKey(k string) bool {
 		m.times = min(99, m.times+1)
 		m.modesDirty = true
 	case "left":
-		m.mp.Do("seek", -5, "relative")
+		m.mp.Do("seek", -1, "relative")
 	case "right":
+		m.mp.Do("seek", 1, "relative")
+	case "ctrl-left":
+		m.mp.Do("seek", -5, "relative")
+	case "ctrl-right":
 		m.mp.Do("seek", 5, "relative")
 	case "+", "=":
 		m.mp.Do("add", "volume", 1)
 	case "-", "_":
 		m.mp.Do("add", "volume", -1)
+	case "ctrl-+":
+		m.mp.Do("add", "volume", 5)
+	case "ctrl--":
+		m.mp.Do("add", "volume", -5)
 	case "backspace":
 		m.goUpDir()
 	case "a":
