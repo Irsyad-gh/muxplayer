@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {goos: linux, goarch: amd64}
+          - {goos: linux, goarch: arm64}
+          - {goos: darwin, goarch: amd64}
+          - {goos: darwin, goarch: arm64}
+          - {goos: windows, goarch: amd64}
+          - {goos: windows, goarch: arm64}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+          cache: true
+      - name: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          ext=""
+          if [ "${{ matrix.goos }}" = windows ]; then ext=".exe"; fi
+          mkdir -p dist
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -trimpath \
+            -ldflags "-s -w -X main.version=${version} -X main.commit=${GITHUB_SHA::12} -X main.buildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -o "dist/muxplayer${ext}" .
+      - name: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          name="muxplayer_${version}_${{ matrix.goos }}_${{ matrix.goarch }}"
+          stage="${RUNNER_TEMP}/${name}"
+          mkdir -p "$stage" dist
+          bin="dist/muxplayer"
+          if [ "${{ matrix.goos }}" = windows ]; then bin="${bin}.exe"; fi
+          cp "$bin" "$stage/"
+          cp LICENSE README.md "$stage/"
+          if [ "${{ matrix.goos }}" = windows ]; then
+            archive="${name}.zip"
+            (cd "$RUNNER_TEMP" && zip -qr "$GITHUB_WORKSPACE/dist/${archive}" "$name")
+          else
+            archive="${name}.tar.gz"
+            tar -C "$RUNNER_TEMP" -czf "dist/${archive}" "$name"
+          fi
+          echo "ARCHIVE=${archive}" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE }}
+          path: dist/${{ env.ARCHIVE }}
+
+  release:
+    name: publish
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+      - name: publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* \
+              --title "muxplayer ${GITHUB_REF_NAME#v}" \
+              --generate-notes
+          fi

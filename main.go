@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime/debug"
-	"strings"
 
 	"github.com/Irsyad-gh/muxplayer/internal/app"
 	"github.com/Irsyad-gh/muxplayer/internal/cover"
@@ -21,7 +19,7 @@ import (
 // version is reported by --version. Override it at build time with:
 //
 //	go build -ldflags "-X main.version=1.2.3"
-var version = "0.8.12"
+var version = "0.8.13"
 
 // commit and buildDate are filled in by the release build.
 var (
@@ -29,23 +27,12 @@ var (
 	buildDate string
 )
 
-// versionString prefers the module version so `go install ...@v1.2.3` reports
-// the tag instead of whatever was baked into the source tree.
-func versionString() string {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		if v := strings.TrimPrefix(info.Main.Version, "v"); v != "" && v != "(devel)" {
-			return v
-		}
-	}
-	return version
-}
-
 func main() {
 	os.Exit(run())
 }
 
 func run() (code int) {
-	v := versionString()
+	v := version
 	opts := parseArgs(os.Args[1:])
 	if opts.help {
 		printUsage()
@@ -119,7 +106,7 @@ Environment:
   MUXPLAYER_DEBUG          Print debug diagnostics to stderr
 
 Playlist and configuration are saved under $XDG_CONFIG_HOME/muxplayer.
-`, versionString())
+`, version)
 }
 
 // parseArgs separates the CLI flags from the optional start path. It keeps the
