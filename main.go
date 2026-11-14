@@ -19,7 +19,7 @@ import (
 // version is reported by --version. Override it at build time with:
 //
 //	go build -ldflags "-X main.version=1.2.3"
-var version = "0.8.10"
+var version = "0.8.11"
 
 func main() {
 	os.Exit(run())
