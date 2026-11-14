@@ -5,6 +5,7 @@ package mpv
 // note: windows named pipes are a different beast, hence the separate file
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -160,15 +161,23 @@ func open(addr string) (*pipeConn, error) {
 	return c, nil
 }
 
-// dial retries until mpv has created its named pipe or the budget expires.
-func dial(addr string) (io.ReadWriteCloser, error) {
+// dial retries until mpv has created its named pipe, its IPC budget expires,
+// or mpv exits first.
+func dial(addr string, exited <-chan error) (io.ReadWriteCloser, error) {
 	var err error
 	for i := 0; i < 50; i++ {
 		var c *pipeConn
 		if c, err = open(addr); err == nil {
 			return c, nil
 		}
-		time.Sleep(100 * time.Millisecond)
+		select {
+		case waitErr := <-exited:
+			if waitErr != nil {
+				return nil, fmt.Errorf("mpv died before IPC was ready: %w", waitErr)
+			}
+			return nil, errors.New("mpv died before IPC was ready")
+		case <-time.After(100 * time.Millisecond):
+		}
 	}
 	return nil, err
 }

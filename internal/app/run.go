@@ -5,6 +5,7 @@ package app
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -22,7 +23,7 @@ import (
 
 // Run opens dir and runs the TUI until the user quits. A non-empty track is
 // added to the playlist and starts playing immediately.
-func Run(p *mpv.Player, dir, track, version string) {
+func Run(p *mpv.Player, dir, track, version string) error {
 	m := newModel(p, version)
 	m.load(dir)
 	if track != "" {
@@ -33,7 +34,7 @@ func Run(p *mpv.Player, dir, track, version string) {
 	diag.Debugf("app: starting in %s (%d tracks in playlist)", dir, len(m.list))
 	mpr := mpris.Start()
 	diag.Debugf("app: MPRIS available: %v", mpr != nil)
-	run(m, mpr)
+	return run(m, mpr)
 }
 
 // view tracks the previous frame for diffed rendering and resize handling.
@@ -71,7 +72,7 @@ func (v *view) flush(rows []string) {
 	os.Stdout.Write(buf.Bytes()) // ignore error, terminal is probably gone
 }
 
-func run(m *model, mpr *mpris.Server) {
+func run(m *model, mpr *mpris.Server) error {
 	restore := term.Raw()
 	inCh := make(chan input, 64)
 	go readInput(inCh)
@@ -113,14 +114,15 @@ func run(m *model, mpr *mpris.Server) {
 			if in.mouse {
 				m.onMouse(in)
 			} else if m.onKey(in.key) {
-				return
+				return nil
 			}
 		case ev, ok := <-evCh:
 			if !ok {
-				evCh = nil
-				continue
+				return errors.New("mpv event stream closed")
 			}
 			m.handleEvent(ev)
+		case <-m.mp.Done():
+			return m.mp.ExitErr()
 		case bars := <-vizCh:
 			m.bars = bars
 		case res := <-m.coverCh:
@@ -128,11 +130,11 @@ func run(m *model, mpr *mpris.Server) {
 		case a := <-mprisCh:
 			diag.Debugf("mpris action: %s %v", a.Kind, a.Arg)
 			if m.action(a) {
-				return
+				return nil
 			}
 		case s := <-sigCh:
 			if !term.IsResize(s) {
-				return
+				return nil
 			}
 			v.invalidate()
 		case <-tick.C:

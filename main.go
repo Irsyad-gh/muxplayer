@@ -19,7 +19,7 @@ import (
 // version is reported by --version. Override it at build time with:
 //
 //	go build -ldflags "-X main.version=1.2.3"
-var version = "0.8.13"
+var version = "0.8.14"
 
 // commit and buildDate are filled in by the release build.
 var (
@@ -69,7 +69,10 @@ func run() (code int) {
 	}
 	dir, track := startTarget(opts.path)
 	diag.Debugf("opening %s", dir)
-	app.Run(player, dir, track, v)
+	if err := app.Run(player, dir, track, v); err != nil {
+		diag.Errf("%v", err)
+		return 1
+	}
 	return 0
 }
 

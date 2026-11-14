@@ -5,6 +5,7 @@ package mpv
 // note: unix socket paths have a length limit, so the hash keeps them short
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -18,15 +19,23 @@ func addr() string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("muxplayer-%d.sock", os.Getpid()))
 }
 
-// dial retries until mpv has created its socket or the budget expires.
-func dial(addr string) (io.ReadWriteCloser, error) {
+// dial retries until mpv has created its socket, its IPC budget expires, or
+// mpv exits first.
+func dial(addr string, exited <-chan error) (io.ReadWriteCloser, error) {
 	var err error
 	for i := 0; i < 50; i++ {
 		var conn net.Conn
 		if conn, err = net.Dial("unix", addr); err == nil {
 			return conn, nil
 		}
-		time.Sleep(100 * time.Millisecond)
+		select {
+		case waitErr := <-exited:
+			if waitErr != nil {
+				return nil, fmt.Errorf("mpv died before IPC was ready: %w", waitErr)
+			}
+			return nil, errors.New("mpv died before IPC was ready")
+		case <-time.After(100 * time.Millisecond):
+		}
 	}
 	return nil, err
 }
