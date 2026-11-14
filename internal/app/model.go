@@ -92,6 +92,8 @@ type model struct {
 	drag           bool
 	volDrag        bool
 	errs           int
+	notice         string
+	noticeAt       time.Time
 	dirty          bool      // playlist changed and still needs to be written
 	volDirty       bool      // volume changed and still needs to be written
 	volSaveAt      time.Time // last failed volume save, used to back off

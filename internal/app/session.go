@@ -81,7 +81,7 @@ func (m *model) flushSession() {
 	}
 	m.sessionSaveAt = time.Now()
 	if err := m.saveSession(); err != nil {
-		diag.Warnf("%v", err)
+		m.noticef("session save: %v", err)
 	}
 }
 

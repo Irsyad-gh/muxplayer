@@ -57,6 +57,19 @@ func TestVersionLabel(t *testing.T) {
 	}
 }
 
+// TestNoticeIsDrawnInFooter checks that save warnings stay in the UI instead
+// of being written over the alternate screen.
+func TestNoticeIsDrawnInFooter(t *testing.T) {
+	m := newTestModel()
+	m.noticef("playlist save: disk full")
+	for _, size := range [][2]int{{100, 30}, {40, 10}} {
+		m.draw(size[0], size[1])
+		if !strings.Contains(strings.Join(m.scr.rows(), "\n"), "disk full") {
+			t.Fatalf("%dx%d frame is missing the notice", size[0], size[1])
+		}
+	}
+}
+
 // TestCompactVisualizer checks the too-small layout fills the screen with the
 // spectrum instead of a warning, while keyboard controls keep working.
 func TestCompactVisualizer(t *testing.T) {

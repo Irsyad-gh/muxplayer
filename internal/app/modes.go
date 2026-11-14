@@ -8,8 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/Irsyad-gh/muxplayer/internal/diag"
 )
 
 // modeState is the persistent playback mode selection.
@@ -49,7 +47,7 @@ func (m *model) flushModes() {
 	}
 	if err := m.saveModes(); err != nil {
 		m.modesSaveAt = time.Now()
-		diag.Warnf("%v", err)
+		m.noticef("mode save: %v", err)
 		return
 	}
 	m.modesSaveAt = time.Time{}

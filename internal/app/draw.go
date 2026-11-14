@@ -51,7 +51,11 @@ func (m *model) draw(w, h int) {
 	if m.tab == 1 {
 		help = helpExplorer
 	}
-	s.text(1, h-1, trunc(help, w-2), def, def, aDim, -1)
+	fg, at := def, aDim
+	if msg := m.currentNotice(); msg != "" {
+		help, fg, at = msg, acc, aBold
+	}
+	s.text(1, h-1, trunc(help, w-2), fg, def, at, -1)
 }
 
 func (m *model) resetScreen(w, h int) *screen {
@@ -272,6 +276,9 @@ func (m *model) drawCompact(s *screen, w, h int) {
 	acc, _ := m.colors()
 	if m.vizOK && h > 0 {
 		m.drawSpectrum(s, 0, w, h-1, h, acc)
+	}
+	if msg := m.currentNotice(); msg != "" && h > 0 {
+		s.ctr(0, w, h-1, msg, acc, def, aBold)
 	}
 }
 

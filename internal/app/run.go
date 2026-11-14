@@ -154,7 +154,9 @@ func run(m *model, mpr *mpris.Server) error {
 func shutdown(m *model, mpr *mpris.Server, viz *visualizer.Visualizer, restore func(), sigCh chan os.Signal, tick *time.Ticker) {
 	diag.Debugf("app: shutting down")
 	restore()
-	m.savePlaylist()
+	if err := m.savePlaylist(); err != nil {
+		diag.Warnf("%v", err)
+	}
 	if m.volDirty {
 		m.saveVolume() // ignore error, shutdown is best effort
 	}
@@ -190,21 +192,22 @@ func (m *model) flushPlaylist() {
 		return
 	}
 	m.saveAt = time.Now()
-	m.savePlaylist()
+	if err := m.savePlaylist(); err != nil {
+		m.noticef("playlist save: %v", err)
+	}
 }
 
-func (m *model) savePlaylist() {
+func (m *model) savePlaylist() error {
 	path := plPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		diag.Warnf("create config dir: %v", err)
-		return
+		return fmt.Errorf("create config dir: %w", err)
 	}
 	data := []byte(strings.Join(m.list, "\n"))
 	if err := writeFileAtomic(path, data, 0o644); err != nil {
-		diag.Warnf("save playlist: %v", err)
-		return
+		return fmt.Errorf("save playlist: %w", err)
 	}
 	m.dirty = false
+	return nil
 }
 
 // flushVolume writes the current volume whenever it changed. Like the
@@ -219,6 +222,7 @@ func (m *model) flushVolume() {
 	}
 	if err := m.saveVolume(); err != nil {
 		m.volSaveAt = time.Now()
+		m.noticef("volume save: %v", err)
 		return
 	}
 	m.volSaveAt = time.Time{}
