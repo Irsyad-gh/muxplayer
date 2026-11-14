@@ -2,14 +2,14 @@
 
 A terminal music player for Linux, macOS, and Windows, written in Go and driven by [mpv](https://mpv.io/). You browse your library, build a queue, and get cover art, an accent colour pulled from the artwork, and a live system-audio visualizer, all inside the terminal. The audio capture and FFT are plain Go, so you don't need cava or any other visualizer process running alongside it.
 
-![Version](https://img.shields.io/badge/version-0.8.15-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Go](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Current release: `0.8.15`
+Current release: `1.0.0`
 
-> **Caution:** muxplayer is still in development. Expect some bugs and the occasional crash. If you hit one, please [open an issue](https://github.com/Irsyad-gh/muxplayer/issues).
+> **Note:** 1.0.0 is the first stable release. Playback, playlist persistence, cover art, and MPRIS are stable. The macOS visualizer is still unavailable, and Windows support targets Windows Terminal. If you hit a bug, please [open an issue](https://github.com/Irsyad-gh/muxplayer/issues). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 ## What it does
 
@@ -95,7 +95,21 @@ winget install Gyan.FFmpeg
 
 On Windows, run muxplayer inside Windows Terminal (or any console with VT support). The visualizer uses WASAPI loopback on the default output device, so it follows whatever mpv is playing without extra setup.
 
-### 2. Build muxplayer
+### 2. Install muxplayer
+
+#### Prebuilt binaries
+
+Download the archive for your platform from the [releases page](https://github.com/Irsyad-gh/muxplayer/releases). Every release ships Linux and macOS `.tar.gz` archives, Windows `.zip` archives, and a `SHA256SUMS` file.
+
+```sh
+# Linux example
+tar -xzf muxplayer_1.0.0_linux_amd64.tar.gz
+sudo install -Dm755 muxplayer_1.0.0_linux_amd64/muxplayer /usr/local/bin/muxplayer
+```
+
+On Windows, extract the zip and put `muxplayer.exe` somewhere on your `PATH`.
+
+#### Build from source
 
 ```sh
 git clone https://github.com/Irsyad-gh/muxplayer.git

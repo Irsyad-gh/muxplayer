@@ -19,7 +19,7 @@ import (
 // version is reported by --version. Override it at build time with:
 //
 //	go build -ldflags "-X main.version=1.2.3"
-var version = "0.8.15"
+var version = "1.0.0"
 
 // commit and buildDate are filled in by the release build.
 var (
