@@ -8,31 +8,57 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/debug"
+	"strings"
 
-	"muxplayer/internal/app"
-	"muxplayer/internal/cover"
-	"muxplayer/internal/debugmode"
-	"muxplayer/internal/diag"
-	"muxplayer/internal/mpv"
+	"github.com/Irsyad-gh/muxplayer/internal/app"
+	"github.com/Irsyad-gh/muxplayer/internal/cover"
+	"github.com/Irsyad-gh/muxplayer/internal/debugmode"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/mpv"
 )
 
 // version is reported by --version. Override it at build time with:
 //
 //	go build -ldflags "-X main.version=1.2.3"
-var version = "0.8.11"
+var version = "0.8.12"
+
+// commit and buildDate are filled in by the release build.
+var (
+	commit    string
+	buildDate string
+)
+
+// versionString prefers the module version so `go install ...@v1.2.3` reports
+// the tag instead of whatever was baked into the source tree.
+func versionString() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		if v := strings.TrimPrefix(info.Main.Version, "v"); v != "" && v != "(devel)" {
+			return v
+		}
+	}
+	return version
+}
 
 func main() {
 	os.Exit(run())
 }
 
 func run() (code int) {
+	v := versionString()
 	opts := parseArgs(os.Args[1:])
 	if opts.help {
 		printUsage()
 		return 0
 	}
 	if opts.version {
-		fmt.Printf("muxplayer %s\n", version)
+		fmt.Printf("muxplayer %s\n", v)
+		if commit != "" {
+			fmt.Printf("commit %s\n", commit)
+		}
+		if buildDate != "" {
+			fmt.Printf("built %s\n", buildDate)
+		}
 		fmt.Printf("2026 (C) Irsyad Dzaky Nurghany \n")
 		fmt.Printf("https://github.com/Irsyad-gh/muxplayer MIT License\n")
 		return 0
@@ -42,7 +68,7 @@ func run() (code int) {
 		// It reports its PID so the original window can stop it on Ctrl-C.
 		debugmode.EnterChild()
 	} else if opts.debug {
-		code, err := debugmode.Run(os.Args[0], opts.args, version)
+		code, err := debugmode.Run(os.Args[0], opts.args, v)
 		if err != nil {
 			diag.Errf("%v", err)
 			return 1
@@ -56,7 +82,7 @@ func run() (code int) {
 	}
 	dir, track := startTarget(opts.path)
 	diag.Debugf("opening %s", dir)
-	app.Run(player, dir, track, version)
+	app.Run(player, dir, track, v)
 	return 0
 }
 
@@ -93,7 +119,7 @@ Environment:
   MUXPLAYER_DEBUG          Print debug diagnostics to stderr
 
 Playlist and configuration are saved under $XDG_CONFIG_HOME/muxplayer.
-`, version)
+`, versionString())
 }
 
 // parseArgs separates the CLI flags from the optional start path. It keeps the

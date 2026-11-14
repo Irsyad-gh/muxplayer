@@ -17,7 +17,7 @@ import (
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/godbus/dbus/v5/prop"
 
-	"muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
 )
 
 // Path is the object path shared by both interfaces; each track advertises

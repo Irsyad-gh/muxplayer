@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"path/filepath"
 
-	"muxplayer/internal/cover"
-	"muxplayer/internal/mpris"
+	"github.com/Irsyad-gh/muxplayer/internal/cover"
+	"github.com/Irsyad-gh/muxplayer/internal/mpris"
 )
 
 // mprisLoop maps a repeat mode to the MPRIS loop status; N× restarts collide

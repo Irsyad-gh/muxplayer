@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"muxplayer/internal/cover"
+	"github.com/Irsyad-gh/muxplayer/internal/cover"
 )
 
 const (

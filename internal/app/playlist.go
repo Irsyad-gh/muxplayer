@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"muxplayer/internal/cover"
-	"muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/cover"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
 )
 
 // rebuild reshuffles the play order for the current mode and points pos back

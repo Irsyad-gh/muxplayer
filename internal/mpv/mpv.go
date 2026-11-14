@@ -10,8 +10,8 @@ import (
 	"os/exec"
 	"time"
 
-	"muxplayer/internal/diag"
-	"muxplayer/internal/proc"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/proc"
 )
 
 // Player is a running mpv instance plus its event stream.

@@ -5,7 +5,7 @@ package app
 import (
 	"path/filepath"
 
-	"muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
 )
 
 func (m *model) prev() {

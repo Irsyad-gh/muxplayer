@@ -1,4 +1,4 @@
-module muxplayer
+module github.com/Irsyad-gh/muxplayer
 
 go 1.26.0
 

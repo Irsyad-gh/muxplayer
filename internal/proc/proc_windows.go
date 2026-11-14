@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
 )
 
 const (

@@ -5,7 +5,7 @@ package app
 import (
 	"testing"
 
-	"muxplayer/internal/mpris"
+	"github.com/Irsyad-gh/muxplayer/internal/mpris"
 )
 
 func TestSnapshotIdle(t *testing.T) {

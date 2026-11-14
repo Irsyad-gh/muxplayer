@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"muxplayer/internal/cover"
-	"muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/cover"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
 )
 
 func (m *model) setQuery(q string) {

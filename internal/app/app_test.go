@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"muxplayer/internal/cover"
+	"github.com/Irsyad-gh/muxplayer/internal/cover"
 )
 
 func newTestModel() *model {

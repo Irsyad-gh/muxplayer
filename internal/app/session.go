@@ -10,7 +10,7 @@ import (
 	"slices"
 	"time"
 
-	"muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
 )
 
 const sessionSaveInterval = 250 * time.Millisecond

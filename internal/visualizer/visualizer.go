@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"muxplayer/internal/audiocap"
+	"github.com/Irsyad-gh/muxplayer/internal/audiocap"
 )
 
 const (

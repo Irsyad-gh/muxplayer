@@ -2,12 +2,12 @@
 
 A terminal music player for Linux, macOS, and Windows, written in Go and driven by [mpv](https://mpv.io/). You browse your library, build a queue, and get cover art, an accent colour pulled from the artwork, and a live system-audio visualizer, all inside the terminal. The audio capture and FFT are plain Go, so you don't need cava or any other visualizer process running alongside it.
 
-![Version](https://img.shields.io/badge/version-0.8.11-blue)
-![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)
+![Version](https://img.shields.io/badge/version-0.8.12-blue)
+![Go](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Current release: `0.8.11`
+Current release: `0.8.12`
 
 > **Caution:** muxplayer is still in development. Expect some bugs and the occasional crash. If you hit one, please [open an issue](https://github.com/Irsyad-gh/muxplayer/issues).
 
@@ -46,7 +46,7 @@ You'll also need:
 - Linux, macOS, or Windows. The terminal and mpv-IPC layers are per-OS, and everything else is shared through build tags.
 - A truecolour terminal, for the best results.
 - A terminal of at least 60×18 cells.
-- Go 1.21 or newer, but only if you build from source.
+- Go 1.26 or newer, but only if you build from source.
 
 ### Audio formats
 
@@ -116,7 +116,7 @@ install -Dm755 muxplayer ~/.local/bin/muxplayer
 Or let Go install it into its own binary directory (make sure `$(go env GOPATH)/bin` is on your `PATH`):
 
 ```sh
-go install .
+go install github.com/Irsyad-gh/muxplayer@latest
 ```
 
 ### 3. Check that it works

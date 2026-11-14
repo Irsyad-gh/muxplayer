@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"muxplayer/internal/audiocap"
-	"muxplayer/internal/diag"
-	"muxplayer/internal/mpris"
-	"muxplayer/internal/mpv"
-	"muxplayer/internal/term"
-	"muxplayer/internal/visualizer"
+	"github.com/Irsyad-gh/muxplayer/internal/audiocap"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/mpris"
+	"github.com/Irsyad-gh/muxplayer/internal/mpv"
+	"github.com/Irsyad-gh/muxplayer/internal/term"
+	"github.com/Irsyad-gh/muxplayer/internal/visualizer"
 )
 
 // Run opens dir and runs the TUI until the user quits. A non-empty track is

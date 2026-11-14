@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"muxplayer/internal/diag"
-	"muxplayer/internal/term"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/term"
 )
 
 type RGB [3]float64

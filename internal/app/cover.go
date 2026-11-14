@@ -5,7 +5,7 @@ package app
 import (
 	"fmt"
 
-	"muxplayer/internal/cover"
+	"github.com/Irsyad-gh/muxplayer/internal/cover"
 )
 
 // drawCover paints the square cover and returns the y row for the player block.

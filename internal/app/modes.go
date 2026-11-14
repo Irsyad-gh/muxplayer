@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
 )
 
 // modeState is the persistent playback mode selection.

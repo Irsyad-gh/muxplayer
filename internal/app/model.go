@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"muxplayer/internal/cover"
-	"muxplayer/internal/mpv"
-	"muxplayer/internal/term"
+	"github.com/Irsyad-gh/muxplayer/internal/cover"
+	"github.com/Irsyad-gh/muxplayer/internal/mpv"
+	"github.com/Irsyad-gh/muxplayer/internal/term"
 )
 
 const (

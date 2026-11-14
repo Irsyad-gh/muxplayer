@@ -3,8 +3,8 @@ package app
 // note: mpv sends numbers as float64, so these type assertions are load-bearing
 
 import (
-	"muxplayer/internal/cover"
-	"muxplayer/internal/diag"
+	"github.com/Irsyad-gh/muxplayer/internal/cover"
+	"github.com/Irsyad-gh/muxplayer/internal/diag"
 )
 
 func (m *model) handleEvent(e map[string]any) {
